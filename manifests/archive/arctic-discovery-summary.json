@@ -1,0 +1,56 @@
+{
+  "dataset": "open-index/arctic",
+  "validated_at": "2026-06-11",
+  "validated_by": "codex",
+  "status": "phase1_ready",
+  "remote_access": {
+    "duckdb_hf_parquet_read": true,
+    "comments_sample_read": true,
+    "submissions_sample_read": true
+  },
+  "published_summary": {
+    "total_items": 12100000000,
+    "comments_items": 9700000000,
+    "submissions_items": 2400000000,
+    "compressed_parquet_bytes_approx": 1100000000000
+  },
+  "published_structure": {
+    "comments_pattern": "data/comments/<year>/<month>/<shard>.parquet",
+    "submissions_pattern": "data/submissions/<year>/<month>/<shard>.parquet",
+    "sharding": "monthly shards, with larger months split into multiple parquet files"
+  },
+  "local_schema_fields_verified": {
+    "comments": [
+      "id",
+      "author",
+      "subreddit",
+      "body",
+      "score",
+      "created_utc",
+      "created_at",
+      "body_length",
+      "link_id",
+      "parent_id",
+      "distinguished",
+      "author_flair_text"
+    ],
+    "submissions": [
+      "id",
+      "author",
+      "subreddit",
+      "title",
+      "selftext",
+      "score",
+      "created_utc",
+      "created_at",
+      "title_length",
+      "num_comments",
+      "url",
+      "over_18"
+    ]
+  },
+  "caveats": [
+    "A direct comment path probe under data/comments/2023 returned 404 during local validation.",
+    "Phase 2 should generate exact shard manifests instead of relying on dataset-card assumptions alone."
+  ]
+}

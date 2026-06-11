@@ -1,0 +1,55 @@
+{
+  "pilot_id": "travel-q1-2021",
+  "phase": "phase1",
+  "domain": "travel",
+  "record_types": [
+    "comments",
+    "submissions"
+  ],
+  "subreddits": [
+    "travel",
+    "solotravel",
+    "shoestring",
+    "onebag",
+    "digitalnomad",
+    "travelhacks"
+  ],
+  "months": [
+    "2021-01",
+    "2021-02",
+    "2021-03"
+  ],
+  "smoke_months": [
+    "2021-01"
+  ],
+  "archive_patterns": {
+    "comments": "hf://datasets/open-index/arctic/data/comments/{year}/{month}/*.parquet",
+    "submissions": "hf://datasets/open-index/arctic/data/submissions/{year}/{month}/*.parquet"
+  },
+  "all_reddit_month_stats": {
+    "2021-01": {
+      "comments_rows": 210496207,
+      "comments_parquet_bytes": 17386136706,
+      "submissions_rows": 32704571,
+      "submissions_parquet_bytes": 3324589156
+    },
+    "2021-02": {
+      "comments_rows": 193510365,
+      "comments_parquet_bytes": 16040145136,
+      "submissions_rows": 31147947,
+      "submissions_parquet_bytes": 3196374118
+    },
+    "2021-03": {
+      "comments_rows": 207454415,
+      "comments_parquet_bytes": 17479835440,
+      "submissions_rows": 33006103,
+      "submissions_parquet_bytes": 3439770881
+    }
+  },
+  "safety": {
+    "smoke_first": true,
+    "abort_if_smoke_output_bytes_gt": 8000000000,
+    "abort_if_total_output_bytes_gt": 20000000000
+  },
+  "phase2_expectation": "Generate concrete shard manifests per month and record type before writing local raw outputs."
+}

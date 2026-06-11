@@ -1,0 +1,48 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Go
+bin/
+dist/
+*.test
+coverage.out
+
+# DuckDB / local analytics
+*.duckdb
+*.duckdb.wal
+.duckdb/
+
+# Local data layers
+data/raw/**
+data/clean/**
+data/marts/**
+data/tmp/**
+data/exports/**
+
+# Keep directory structure docs if added later
+!data/**/.gitkeep
+
+# State
+state/checkpoints/**
+state/runs/**
+state/logs/**
+!state/**/.gitkeep
+
+# Notebook noise
+.ipynb_checkpoints/
+
+# Local env and secrets
+.env
+.env.*
+
+# Build and temp
+tmp/
+*.log

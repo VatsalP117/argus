@@ -1,0 +1,37 @@
+name: travel
+description: >
+  Travel-focused research domain for discovering repeated user pain points,
+  request-like conversations, workarounds, and app opportunities.
+subreddits:
+  - travel
+  - solotravel
+  - shoestring
+  - onebag
+  - digitalnomad
+  - travelhacks
+seed_keywords:
+  - itinerary
+  - visa
+  - airport
+  - booking
+  - hostel
+  - luggage
+  - baggage
+  - customs
+  - layover
+  - travel insurance
+  - train pass
+  - roaming
+  - esim
+pain_point_phrases:
+  - i hate when
+  - the worst part about
+  - frustrating
+  - impossible to
+  - stressful
+request_phrases:
+  - i wish there was
+  - someone should build
+  - why is there no
+  - what do you use for
+  - looking for an app

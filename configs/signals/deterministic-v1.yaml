@@ -1,0 +1,39 @@
+version: deterministic_v1
+signal_types:
+  - pain_point
+  - feature_request
+  - recommendation_request
+  - workaround
+  - comparison
+pain_point_patterns:
+  - i hate when
+  - the worst part about
+  - frustrating
+  - annoying
+  - struggle with
+  - difficult to
+feature_request_patterns:
+  - i wish there was
+  - someone should build
+  - why is there no
+  - need an app for
+recommendation_request_patterns:
+  - what do you use for
+  - any app for
+  - looking for recommendations
+  - how do you manage
+workaround_patterns:
+  - my workaround is
+  - i ended up using
+  - i usually do this instead
+  - hacky way
+comparison_patterns:
+  - better than
+  - compared with
+  - vs
+entity_categories:
+  - product
+  - domain_term
+  - airline
+  - booking_platform
+  - payment_tool

@@ -1,0 +1,43 @@
+pipeline_name: pilot_travel_q1_2021
+phase_target: phase2
+domain: travel
+archive:
+  repo: open-index/arctic
+  transport: duckdb_hf_parquet
+record_types:
+  - comments
+  - submissions
+months:
+  - 2021-01
+  - 2021-02
+  - 2021-03
+smoke_months:
+  - 2021-01
+subreddits:
+  - travel
+  - solotravel
+  - shoestring
+  - onebag
+  - digitalnomad
+  - travelhacks
+output:
+  raw_dir: data/raw
+  clean_dir: data/clean
+  marts_dir: data/marts
+  exports_dir: data/exports
+state:
+  checkpoints_dir: state/checkpoints
+  runs_dir: state/runs
+  logs_dir: state/logs
+safety:
+  abort_if_total_raw_bytes_gt: 20000000000
+  abort_if_smoke_run_bytes_gt: 8000000000
+  abort_if_month_count_gt_without_confirmation: 1
+quality:
+  require_source_file: true
+  require_ingested_at: true
+  quarantine_bad_shards: true
+notes:
+  - Start with a single smoke month.
+  - Do not ingest the full quarter in one run.
+  - Measure actual filtered output before widening.
