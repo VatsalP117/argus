@@ -46,7 +46,7 @@ type Manifest struct {
 
 func Build(repo string, cfg config.PipelineConfig, months []string, recordTypes []string, shardsByGroup map[string][]archive.TreeFile) Manifest {
 	m := Manifest{
-		ManifestID:   cfg.PipelineName + "-" + time.Now().UTC().Format("20060111T150405Z"),
+		ManifestID:   cfg.PipelineName + "-" + time.Now().UTC().Format("20060102T150405Z"),
 		GeneratedAt:  time.Now().UTC().Format(time.RFC3339),
 		DatasetRepo:  repo,
 		PipelineName: cfg.PipelineName,
