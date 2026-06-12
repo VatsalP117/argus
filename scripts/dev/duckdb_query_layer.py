@@ -213,24 +213,31 @@ def build_query_sql(args) -> str:
     if args.query_name == "signal_evidence":
         conditions = build_signal_conditions(args)
         return f"""
+            WITH filtered AS (
+                SELECT *
+                FROM research_signals
+                WHERE {conditions}
+            )
             SELECT
-                signal_type,
-                coalesce(topic_hint, 'unclassified') AS topic_hint,
-                matched_pattern,
-                subreddit,
-                source_type,
-                source_id,
-                raw_id,
-                created_at,
-                score,
-                left(evidence_text, 500) AS evidence_text,
-                source_file,
-                manifest_id,
-                clean_run_id,
-                signal_run_id
-            FROM research_signals
-            WHERE {conditions}
-            ORDER BY created_at DESC, source_id
+                filtered.signal_type,
+                coalesce(filtered.topic_hint, 'unclassified') AS topic_hint,
+                filtered.matched_pattern,
+                filtered.subreddit,
+                filtered.source_type,
+                filtered.source_id,
+                filtered.raw_id,
+                filtered.created_at,
+                source_documents.score,
+                left(filtered.evidence_text, 500) AS evidence_text,
+                filtered.source_file,
+                filtered.manifest_id,
+                filtered.clean_run_id,
+                filtered.signal_run_id
+            FROM filtered
+            LEFT JOIN source_documents
+              ON filtered.source_type = source_documents.source_type
+             AND filtered.source_id = source_documents.source_id
+            ORDER BY filtered.created_at DESC, filtered.source_id
             LIMIT {limit}
         """
 
