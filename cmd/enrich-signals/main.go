@@ -43,9 +43,10 @@ type enrichConfigBundle struct {
 }
 
 type signalRule struct {
-	SignalType string `json:"signal_type"`
-	Label      string `json:"label"`
-	Regex      string `json:"regex"`
+	SignalType       string `json:"signal_type"`
+	Label            string `json:"label"`
+	Regex            string `json:"regex"`
+	RequireTopicHint bool   `json:"require_topic_hint"`
 }
 
 type entityRule struct {
@@ -284,9 +285,10 @@ func buildConfigBundle(domainCfg config.DomainConfig, signalCfg config.SignalCon
 	appendRules := func(signalType string, patterns []string) {
 		for _, pattern := range patterns {
 			rules = append(rules, signalRule{
-				SignalType: signalType,
-				Label:      pattern,
-				Regex:      phraseRegex(pattern),
+				SignalType:       signalType,
+				Label:            pattern,
+				Regex:            phraseRegex(pattern),
+				RequireTopicHint: requiresTopicHint(signalType, pattern),
 			})
 		}
 	}
@@ -357,6 +359,25 @@ func phraseRegex(phrase string) string {
 	escaped := replacer.Replace(strings.ToLower(strings.TrimSpace(phrase)))
 	escaped = strings.Join(strings.Fields(escaped), `\s+`)
 	return `(^|[^a-z0-9])` + escaped + `([^a-z0-9]|$)`
+}
+
+func requiresTopicHint(signalType, pattern string) bool {
+	pattern = strings.ToLower(strings.TrimSpace(pattern))
+
+	if signalType == "comparison" {
+		return true
+	}
+
+	if signalType != "pain_point" {
+		return false
+	}
+
+	switch pattern {
+	case "annoying", "frustrating", "difficult to", "struggle with":
+		return true
+	default:
+		return false
+	}
 }
 
 func runDuckDBEnrich(inputGlob, signalOutputPath, entityOutputPath, metricsOutputPath, configJSONPath, recordType, signalRunID, month, cleanDir, martsDir string, duckdbOpts duckDBOptions) (enrichResult, error) {

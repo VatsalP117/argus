@@ -127,7 +127,7 @@ def main():
 
 def build_signal_copy_query(input_sql: str, output_sql: str, source_type: str, analytical_text: str, signaled_at_sql: str, signal_run_id_sql: str, signal_rules: list[dict], entity_rules: list[dict], signal_version: str) -> str:
     rules_values = ",\n                    ".join(
-        f"('{sql_string(rule['signal_type'])}', '{sql_string(rule['label'])}', '{sql_string(rule['regex'])}')"
+        f"('{sql_string(rule['signal_type'])}', '{sql_string(rule['label'])}', '{sql_string(rule['regex'])}', {str(bool(rule.get('require_topic_hint'))).upper()})"
         for rule in signal_rules
     )
     topic_hint_case = build_topic_hint_case(entity_rules)
@@ -148,7 +148,8 @@ def build_signal_copy_query(input_sql: str, output_sql: str, source_type: str, a
                     month,
                     year,
                     score,
-                    {analytical_text_sql} AS analytical_text
+                    {analytical_text_sql} AS analytical_text,
+                    {topic_hint_case} AS topic_hint
                 FROM read_parquet('{input_sql}')
                 WHERE NOT is_deleted
                   AND NOT is_removed
@@ -157,7 +158,7 @@ def build_signal_copy_query(input_sql: str, output_sql: str, source_type: str, a
                   AND {analytical_text_sql} IS NOT NULL
                   AND trim({analytical_text_sql}) <> ''
             ),
-            rules(signal_type, matched_pattern, pattern_regex) AS (
+            rules(signal_type, matched_pattern, pattern_regex, require_topic_hint) AS (
                 VALUES
                     {rules_values}
             )
@@ -172,7 +173,7 @@ def build_signal_copy_query(input_sql: str, output_sql: str, source_type: str, a
                 1.0::DOUBLE AS signal_score,
                 matched_pattern,
                 analytical_text AS evidence_text,
-                {topic_hint_case} AS topic_hint,
+                topic_hint,
                 source_file,
                 manifest_id,
                 clean_run_id,
@@ -184,6 +185,8 @@ def build_signal_copy_query(input_sql: str, output_sql: str, source_type: str, a
             FROM source
             JOIN rules
               ON regexp_matches(lower(analytical_text), pattern_regex)
+            WHERE NOT require_topic_hint
+               OR topic_hint IS NOT NULL
         )
         TO '{output_sql}'
         (FORMAT PARQUET, COMPRESSION ZSTD)
