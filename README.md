@@ -21,8 +21,9 @@ Current implementation status:
 
 - Phase 0: scaffolded
 - Phase 1: archive discovery and pilot definition prepared
-- Phase 2: core manifest and raw ingest path implemented, optimization and hardening in progress
-- Phase 3: initial clean-layer implementation in progress
+- Phase 2: core manifest and raw ingest path implemented for the frozen Jan-Feb 2021 V0 slice
+- Phase 3: clean-layer implementation completed for the frozen Jan-Feb 2021 V0 slice
+- Phase 4: deterministic signal enrichment and first research queries implemented for V0
 
 Companion docs:
 
@@ -54,6 +55,20 @@ The first pilot is intentionally narrow:
   - evidence exports for manual review
 
 See the detailed pilot definition in [docs/research/pilot-definition.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/research/pilot-definition.md).
+
+## V0 POC Freeze
+
+The current V0 proof-of-concept is intentionally frozen to:
+
+- domain: travel
+- months:
+  - `2021-01`
+  - `2021-02`
+- record types:
+  - comments
+  - submissions
+
+This lets the project move forward on enrichment and research workflows without waiting for full Q1 ingest.
 
 ## Local Requirements
 

@@ -35,3 +35,33 @@ request_phrases:
   - why is there no
   - what do you use for
   - looking for an app
+product_terms:
+  - google maps
+  - tripit
+  - rome2rio
+  - airalo
+  - skyscanner
+  - hopper
+  - tripadvisor
+airline_terms:
+  - delta
+  - united
+  - american airlines
+  - southwest
+  - jetblue
+  - lufthansa
+  - emirates
+booking_platform_terms:
+  - booking.com
+  - airbnb
+  - expedia
+  - kayak
+  - skyscanner
+  - hopper
+  - hostelworld
+payment_tool_terms:
+  - visa
+  - mastercard
+  - wise
+  - revolut
+  - paypal
