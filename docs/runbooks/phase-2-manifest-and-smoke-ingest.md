@@ -8,7 +8,7 @@ Phase 2 currently includes:
 
 - a Hugging Face tree-api manifest builder in Go
 - a shard-level ingest worker in Go
-- a month-grouped ingest mode in Go
+- a month-grouped batch ingest mode in Go
 - a DuckDB-based shard filter and copy helper in Python
 - checkpoint and run-record writing
 
@@ -82,7 +82,7 @@ go run ./cmd/ingest-worker \
 
 ## Run A Month-Grouped Ingest
 
-For a more practical local run, process one whole month and record type at a time:
+For a more practical local run, process one whole month and record type at a time in bounded batches:
 
 ```bash
 go run ./cmd/ingest-worker \
@@ -90,10 +90,13 @@ go run ./cmd/ingest-worker \
   --manifest manifests/pilot/travel-q1-2021-full-manifest.json \
   --record-type submissions \
   --month 2021-01 \
+  --batch-size 8 \
+  --max-batch-source-bytes 536870912 \
   --group-by-month
 ```
 
-The grouped mode writes one output file per month and record type instead of one file per shard.
+The grouped mode writes one output file per bounded batch instead of one file per shard.
+Each grouped batch uses exact manifest URLs rather than a month wildcard scan.
 
 ## Current Runtime Observation
 
@@ -101,7 +104,7 @@ Local filter-on-ingest works for tiny shard smoke runs and has been verified wit
 
 However:
 
-- full month grouped extraction is significantly slower than shard smoke validation
+- full month grouped extraction still needs measurement, but bounded batches are safer than one large month wildcard scan
 - a full Q1 2021 local raw backfill should be treated as a long-running operational job
 - the implementation is in place, but full pilot ingest time needs to be measured in a dedicated unattended run
 
@@ -114,3 +117,5 @@ If the smoke ingest works:
 3. widen shard count
 4. widen to the rest of `2021-01`
 5. only then consider `2021-02` and `2021-03`
+
+Use [phase-2-validation.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-2-validation.md) for the formal preflight, resume, and raw validation flow.

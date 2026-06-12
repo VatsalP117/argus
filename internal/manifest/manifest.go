@@ -1,10 +1,13 @@
 package manifest
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,7 +49,6 @@ type Manifest struct {
 
 func Build(repo string, cfg config.PipelineConfig, months []string, recordTypes []string, shardsByGroup map[string][]archive.TreeFile) Manifest {
 	m := Manifest{
-		ManifestID:   cfg.PipelineName + "-" + time.Now().UTC().Format("20060102T150405Z"),
 		GeneratedAt:  time.Now().UTC().Format(time.RFC3339),
 		DatasetRepo:  repo,
 		PipelineName: cfg.PipelineName,
@@ -101,7 +103,34 @@ func Build(repo string, cfg config.PipelineConfig, months []string, recordTypes 
 		return m.Entries[i].ShardPath < m.Entries[j].ShardPath
 	})
 
+	m.ManifestID = deterministicManifestID(cfg.PipelineName, repo, months, recordTypes, cfg.Subreddits, m.Entries)
 	return m
+}
+
+func deterministicManifestID(pipelineName, repo string, months, recordTypes, subreddits []string, entries []Entry) string {
+	h := sha256.New()
+	writeHashPart(h, pipelineName)
+	writeHashPart(h, repo)
+	for _, item := range months {
+		writeHashPart(h, item)
+	}
+	for _, item := range recordTypes {
+		writeHashPart(h, item)
+	}
+	for _, item := range subreddits {
+		writeHashPart(h, strings.ToLower(item))
+	}
+	for _, entry := range entries {
+		writeHashPart(h, entry.EntryID)
+		writeHashPart(h, entry.ShardPath)
+		writeHashPart(h, strconv.FormatInt(entry.SizeBytes, 10))
+	}
+	return pipelineName + "-" + hex.EncodeToString(h.Sum(nil))[:16]
+}
+
+func writeHashPart(h interface{ Write([]byte) (int, error) }, value string) {
+	_, _ = h.Write([]byte(value))
+	_, _ = h.Write([]byte{0})
 }
 
 func Write(path string, m Manifest) error {

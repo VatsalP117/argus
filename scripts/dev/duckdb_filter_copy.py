@@ -14,6 +14,9 @@ def parse_args():
     parser.add_argument("--manifest-id", required=True)
     parser.add_argument("--source-path", required=True)
     parser.add_argument("--subreddits", required=True)
+    parser.add_argument("--duckdb-memory-limit", default="4GB")
+    parser.add_argument("--duckdb-threads", type=int, default=4)
+    parser.add_argument("--duckdb-temp-dir", default=".duckdb/tmp")
     return parser.parse_args()
 
 
@@ -33,14 +36,23 @@ def main():
 
     output_path = Path(args.output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_output_path = output_path.with_name(output_path.name + ".tmp")
+    temp_output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_output_path.unlink(missing_ok=True)
 
     con = duckdb.connect()
     con.execute("INSTALL httpfs;")
     con.execute("LOAD httpfs;")
+    con.execute(f"SET memory_limit = '{args.duckdb_memory_limit}'")
+    con.execute(f"SET threads = {max(args.duckdb_threads, 1)}")
+    temp_dir = Path(args.duckdb_temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir_sql = str(temp_dir).replace("'", "''")
+    con.execute(f"SET temp_directory = '{temp_dir_sql}'")
 
     subreddit_sql = ",".join("'" + item.replace("'", "''") + "'" for item in subreddits)
     manifest_id_sql = args.manifest_id.replace("'", "''")
-    output_sql = str(output_path).replace("'", "''")
+    output_sql = str(temp_output_path).replace("'", "''")
     source_path_sql = args.source_path.replace("'", "''")
     input_urls_sql = ",".join("'" + item.replace("'", "''") + "'" for item in args.input_url)
     parquet_source = f"[{input_urls_sql}]"
@@ -61,8 +73,9 @@ def main():
         """
         con.execute(copy_query)
 
-        bytes_written = output_path.stat().st_size if output_path.exists() else 0
+        bytes_written = temp_output_path.stat().st_size if temp_output_path.exists() else 0
         if bytes_written == 0:
+            temp_output_path.unlink(missing_ok=True)
             print(
                 json.dumps(
                     {
@@ -77,9 +90,11 @@ def main():
             return 0
 
         rows_written = int(con.execute(f"SELECT count(*) FROM read_parquet('{output_sql}')").fetchone()[0])
-        if rows_written == 0 and output_path.exists():
-            output_path.unlink()
+        if rows_written == 0 and temp_output_path.exists():
+            temp_output_path.unlink()
             bytes_written = 0
+        elif rows_written > 0:
+            temp_output_path.replace(output_path)
 
         print(
             json.dumps(
@@ -94,6 +109,7 @@ def main():
         )
         return 0
     except Exception as exc:  # pragma: no cover
+        temp_output_path.unlink(missing_ok=True)
         emit_error(str(exc))
         return 1
 

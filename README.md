@@ -21,7 +21,7 @@ Current implementation status:
 
 - Phase 0: scaffolded
 - Phase 1: archive discovery and pilot definition prepared
-- Phase 2+: not yet implemented
+- Phase 2: core manifest and raw ingest path implemented, optimization and hardening in progress
 
 Companion docs:
 
