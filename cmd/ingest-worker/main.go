@@ -85,8 +85,8 @@ func main() {
 		panic(err)
 	}
 
-	runID := "phase2-ingest-" + time.Now().UTC().Format("20060102T150405Z")
 	startedAt := time.Now().UTC()
+	runID := "phase2-ingest-" + startedAt.Format("20060102T150405.000000000Z")
 	selected := selectEntries(man.Entries, month, recordType, limitShards)
 	duckdbOpts := duckDBOptions{
 		MemoryLimit: duckDBMemoryLimit,
@@ -323,6 +323,7 @@ func runSingleEntry(cfg config.PipelineConfig, runID, manifestID string, entry m
 func runGroup(cfg config.PipelineConfig, runID, manifestID string, group ingestGroup, force bool, duckdbOpts duckDBOptions) (ingestResult, error) {
 	partName := strings.Split(group.GroupID, ":")
 	partSuffix := partName[len(partName)-1]
+	groupEntryID := group.RecordType + "-" + group.Month + "-" + partSuffix
 	outputPath := filepath.Join(
 		cfg.Output.RawDir,
 		group.RecordType,
@@ -336,7 +337,7 @@ func runGroup(cfg config.PipelineConfig, runID, manifestID string, group ingestG
 		JobName:      "ingest_worker_grouped",
 		RunID:        runID,
 		ManifestID:   manifestID,
-		EntryID:      group.RecordType + "-" + group.Month + "-" + partSuffix,
+		EntryID:      groupEntryID,
 		SourcePath:   group.GroupID,
 		OutputPath:   outputPath,
 		StartedAt:    time.Now().UTC().Format(time.RFC3339),
@@ -359,6 +360,22 @@ func runGroup(cfg config.PipelineConfig, runID, manifestID string, group ingestG
 				return ingestResult{}, err
 			}
 			return ingestResult{Status: "skipped_existing", OutputPath: outputPath}, nil
+		}
+
+		completedZeroRows, err := existingCompletedZeroRowGroup(cfg.State.CheckpointsDir, runID, groupEntryID)
+		if err != nil {
+			return ingestResult{}, err
+		}
+		if completedZeroRows {
+			cp.Status = "skipped_completed_zero_rows"
+			cp.FinishedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := checkpoint.Write(cpPath, cp); err != nil {
+				return ingestResult{}, err
+			}
+			if err := writeGroupedEntryCheckpoints(cfg, runID, manifestID, group, "skipped_completed_zero_rows", "", nil); err != nil {
+				return ingestResult{}, err
+			}
+			return ingestResult{Status: "skipped_completed_zero_rows"}, nil
 		}
 	}
 
@@ -470,6 +487,41 @@ func runDuckDBCopy(urls []string, subreddits []string, manifestID, sourcePath, r
 		return res, fmt.Errorf("%s", res.Error)
 	}
 	return res, nil
+}
+
+func existingCompletedZeroRowGroup(checkpointsRoot, currentRunID, entryID string) (bool, error) {
+	phaseDir := filepath.Join(checkpointsRoot, "phase2")
+	pattern := filepath.Join(phaseDir, "*", entryID+".json")
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return false, err
+	}
+
+	sort.Strings(matches)
+	for _, match := range matches {
+		runDir := filepath.Base(filepath.Dir(match))
+		if runDir == currentRunID {
+			continue
+		}
+
+		data, err := os.ReadFile(match)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return false, err
+		}
+
+		var cp checkpoint.ShardCheckpoint
+		if err := json.Unmarshal(data, &cp); err != nil {
+			return false, err
+		}
+		if cp.Status == "completed_zero_rows" && cp.OutputPath == "" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func gitSHA() string {

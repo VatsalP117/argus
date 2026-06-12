@@ -11,6 +11,7 @@ venv/
 
 # Go
 bin/
+.bin/
 dist/
 *.test
 coverage.out

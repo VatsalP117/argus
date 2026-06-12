@@ -101,7 +101,7 @@ func main() {
 		Groups:       make([]preflightGroup, 0, len(keys)),
 	}
 
-	runID := "phase2-preflight-" + time.Now().UTC().Format("20060102T150405Z")
+	runID := "phase2-preflight-" + time.Now().UTC().Format("20060102T150405.000000000Z")
 	for _, key := range keys {
 		entries := grouped[key]
 		urls := make([]string, 0, len(entries))

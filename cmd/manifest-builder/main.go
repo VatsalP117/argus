@@ -66,7 +66,7 @@ func main() {
 	}
 
 	rec := runmeta.RunRecord{
-		RunID:          "phase2-manifest-" + time.Now().UTC().Format("20060102T150405Z"),
+		RunID:          "phase2-manifest-" + time.Now().UTC().Format("20060102T150405.000000000Z"),
 		Phase:          "phase2",
 		JobName:        "manifest_builder",
 		StartedAt:      man.GeneratedAt,
