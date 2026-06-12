@@ -81,6 +81,44 @@ scripts/dev/run_v0_poc.sh
 
 This writes a timestamped bundle under `data/exports/poc-run-*/`.
 
+## Query The V0 Slice
+
+For read-only querying over curated clean and mart views:
+
+```bash
+go run ./cmd/query \
+  --query-name signal_summary \
+  --signal-type pain_point \
+  --limit 10
+```
+
+Search the cleaned source documents directly:
+
+```bash
+go run ./cmd/query \
+  --query-name source_search \
+  --contains-text visa \
+  --limit 5
+```
+
+Run guarded ad hoc SQL against curated views only:
+
+```bash
+go run ./cmd/query \
+  --query-name custom_sql \
+  --sql-file sql/query_examples/pain_points_by_subreddit.sql \
+  --limit 10
+```
+
+The available temporary views are:
+
+- `source_documents`
+- `research_signals`
+- `entity_mentions`
+- `subreddit_metrics_daily`
+
+See [docs/runbooks/phase-6-query-layer.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-6-query-layer.md) for the pre-LLM checklist and query-layer guardrails.
+
 ## Local Requirements
 
 Minimum practical local baseline:
