@@ -24,6 +24,7 @@ Current implementation status:
 - Phase 2: core manifest and raw ingest path implemented for the frozen Jan-Feb 2021 V0 slice
 - Phase 3: clean-layer implementation completed for the frozen Jan-Feb 2021 V0 slice
 - Phase 4: deterministic signal enrichment and first research queries implemented for V0
+- Phase 5: evidence export workflow implemented for V0
 
 Companion docs:
 
