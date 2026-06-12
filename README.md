@@ -71,6 +71,16 @@ The current V0 proof-of-concept is intentionally frozen to:
 
 This lets the project move forward on enrichment and research workflows without waiting for full Q1 ingest.
 
+## Fastest POC Rerun
+
+To rebuild the current V0 marts, validations, research query outputs, and evidence bundles in one pass:
+
+```bash
+scripts/dev/run_v0_poc.sh
+```
+
+This writes a timestamped bundle under `data/exports/poc-run-*/`.
+
 ## Local Requirements
 
 Minimum practical local baseline:

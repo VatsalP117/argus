@@ -83,9 +83,21 @@ python3 scripts/dev/run_duckdb_sql_file.py \
   --sql-file sql/marts/v0-app-idea-discovery.sql
 ```
 
+Recurring entities and workaround signals:
+
+```bash
+python3 scripts/dev/run_duckdb_sql_file.py \
+  --sql-file sql/marts/v0-entity-workaround-discovery.sql
+```
+
+Or run the full frozen-slice workflow in one command:
+
+```bash
+scripts/dev/run_v0_poc.sh
+```
+
 ## Current Limitations
 
 - rules are phrase-based and intentionally simple
 - entity extraction is dictionary-driven, not NER
 - daily metrics are month-bounded rebuilds, not a global warehouse job
-- no evidence export bundle exists yet

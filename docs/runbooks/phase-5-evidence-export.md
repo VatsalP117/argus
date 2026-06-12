@@ -44,6 +44,12 @@ go run ./cmd/export-evidence \
   --examples-per-group 3
 ```
 
+If you want the full frozen-slice bundle in one pass, use:
+
+```bash
+scripts/dev/run_v0_poc.sh
+```
+
 ## Expected Outputs
 
 Each run writes a timestamped bundle under:
