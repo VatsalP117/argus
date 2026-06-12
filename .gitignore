@@ -43,6 +43,7 @@ state/logs/**
 # Local env and secrets
 .env
 .env.*
+!.env.example
 
 # Build and temp
 tmp/

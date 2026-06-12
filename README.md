@@ -127,12 +127,10 @@ Argus now includes a first `ask` prototype that:
 - runs only the guarded local query layer
 - synthesizes an evidence-backed answer from retrieved rows
 
-Set environment variables:
+Create a local `.env` from [.env.example](/Users/vatsalpatel/Desktop/Projects/argus/.env.example) or let the existing local `.env` supply the values:
 
 ```bash
-export DEEPSEEK_API_KEY=your_key_here
-export DEEPSEEK_BASE_URL=https://api.deepseek.com
-export DEEPSEEK_MODEL=deepseek-v4-flash
+cp .env.example .env
 ```
 
 Then ask a question:
@@ -142,6 +140,8 @@ go run ./cmd/ask \
   --question "What pain points about visas come up most often?" \
   --output-path data/exports/ask-visa.json
 ```
+
+`cmd/ask` automatically loads `.env` and `.env.local` if present.
 
 See [docs/runbooks/phase-6-llm-ask.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-6-llm-ask.md) for the DeepSeek setup, flow, and guardrails.
 

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"argus/internal/config"
+	"argus/internal/envfile"
 	"argus/internal/llm"
 	"argus/internal/runmeta"
 )
@@ -126,6 +127,10 @@ func main() {
 	flag.IntVar(&duckDBThreads, "duckdb-threads", 4, "DuckDB threads for ask retrieval jobs")
 	flag.StringVar(&duckDBTempDir, "duckdb-temp-dir", filepath.Join(".duckdb", "tmp"), "DuckDB temp spill directory")
 	flag.Parse()
+
+	if err := envfile.Load(".env", ".env.local"); err != nil {
+		panic(err)
+	}
 
 	if strings.TrimSpace(question) == "" && strings.TrimSpace(questionFile) == "" {
 		panic("question or question-file is required")
@@ -239,6 +244,23 @@ func runAskFlow(ctx context.Context, client llm.Client, cfg config.PipelineConfi
 			return askOutput{}, err
 		}
 		executions = append(executions, res)
+	}
+
+	if totalRows(executions) == 0 {
+		recoveryPlan := broadenPlanAfterZeroResults(question, validPlan, queryLimit)
+		recoveryExecutions := make([]queryExecution, 0, len(recoveryPlan))
+		for _, item := range recoveryPlan {
+			res, err := runDuckDBQuery(cfg, item, months, includeSQL, duckdbOpts)
+			if err != nil {
+				return askOutput{}, err
+			}
+			recoveryExecutions = append(recoveryExecutions, res)
+		}
+		if totalRows(recoveryExecutions) > 0 {
+			validPlan = recoveryPlan
+			executions = recoveryExecutions
+			plan.Notes = append(plan.Notes, "Initial exact-match retrieval returned zero rows, so Argus retried with a broader fallback plan.")
+		}
 	}
 
 	answer, err := synthesizeAnswer(ctx, client, model, question, plan.Intent, plan.Notes, executions)
@@ -495,6 +517,26 @@ func fallbackPlan(question string, queryLimit int) []plannedQuery {
 	}
 }
 
+func broadenPlanAfterZeroResults(question string, currentPlan []plannedQuery, queryLimit int) []plannedQuery {
+	fallback := fallbackPlan(question, queryLimit)
+	if !plansEqual(currentPlan, fallback) {
+		return fallback
+	}
+
+	return []plannedQuery{
+		{
+			QueryName: "source_search",
+			Filters: map[string]string{
+				"contains-text": extractKeywordFallback(question),
+				"source-type":   "*",
+				"subreddit":     "*",
+			},
+			Limit:  queryLimit,
+			Reason: "Fallback textual drilldown after zero structured retrieval results",
+		},
+	}
+}
+
 func inferSignalType(question string) string {
 	lowerQuestion := strings.ToLower(question)
 	switch {
@@ -554,6 +596,38 @@ func allowedQueryName(name string) bool {
 	default:
 		return false
 	}
+}
+
+func plansEqual(left, right []plannedQuery) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for idx := range left {
+		if left[idx].QueryName != right[idx].QueryName || left[idx].Limit != right[idx].Limit || !stringMapsEqual(left[idx].Filters, right[idx].Filters) {
+			return false
+		}
+	}
+	return true
+}
+
+func stringMapsEqual(left, right map[string]string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for key, value := range left {
+		if right[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+func totalRows(executions []queryExecution) int64 {
+	var total int64
+	for _, execution := range executions {
+		total += execution.RowCount
+	}
+	return total
 }
 
 func normalizeWildcardFilter(value string) string {

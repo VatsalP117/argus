@@ -14,16 +14,15 @@ Why:
 
 ## Environment
 
-Set:
+Create `.env` from `.env.example` and fill in the real key:
 
 ```bash
-export DEEPSEEK_API_KEY=your_key_here
-export DEEPSEEK_BASE_URL=https://api.deepseek.com
-export DEEPSEEK_MODEL=deepseek-v4-flash
+cp .env.example .env
 ```
 
 Notes:
 
+- `cmd/ask` automatically loads `.env` and `.env.local`
 - `DEEPSEEK_BASE_URL` defaults to `https://api.deepseek.com`
 - `DEEPSEEK_MODEL` defaults to `deepseek-v4-flash`
 - do not commit API keys to the repo, configs, or shell scripts
