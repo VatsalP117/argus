@@ -60,7 +60,6 @@ booking_platform_terms:
   - hopper
   - hostelworld
 payment_tool_terms:
-  - visa
   - mastercard
   - wise
   - revolut
