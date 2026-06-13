@@ -94,6 +94,8 @@ type askOutput struct {
 	Error        string           `json:"error,omitempty"`
 }
 
+type outputFormat string
+
 type duckDBOptions struct {
 	MemoryLimit string
 	Threads     int
@@ -109,6 +111,7 @@ func main() {
 	var months string
 	var queryLimit int
 	var answerOutputPath string
+	var cliOutputFormat string
 	var includeSQL bool
 	var duckDBMemoryLimit string
 	var duckDBThreads int
@@ -122,6 +125,7 @@ func main() {
 	flag.StringVar(&months, "months", "*", "comma-separated month filters in YYYY-MM format, or *")
 	flag.IntVar(&queryLimit, "query-limit", 6, "maximum rows per retrieval query")
 	flag.StringVar(&answerOutputPath, "output-path", "", "optional path to write the ask response json")
+	flag.StringVar(&cliOutputFormat, "format", "text", "terminal output format: text or json")
 	flag.BoolVar(&includeSQL, "include-sql", false, "include generated SQL in query execution payloads")
 	flag.StringVar(&duckDBMemoryLimit, "duckdb-memory-limit", "4GB", "DuckDB memory limit for ask retrieval jobs")
 	flag.IntVar(&duckDBThreads, "duckdb-threads", 4, "DuckDB threads for ask retrieval jobs")
@@ -140,6 +144,9 @@ func main() {
 	}
 	if queryLimit > maxQueryLimit {
 		queryLimit = maxQueryLimit
+	}
+	if cliOutputFormat != "text" && cliOutputFormat != "json" {
+		panic("format must be text or json")
 	}
 
 	loadedQuestion := strings.TrimSpace(question)
@@ -223,7 +230,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(encoded))
+	if cliOutputFormat == "json" {
+		fmt.Println(string(encoded))
+		return
+	}
+	fmt.Println(renderAskText(output))
 }
 
 func runAskFlow(ctx context.Context, client llm.Client, cfg config.PipelineConfig, provider, model, question, months string, queryLimit int, includeSQL bool, duckdbOpts duckDBOptions) (askOutput, error) {
@@ -236,6 +247,7 @@ func runAskFlow(ctx context.Context, client llm.Client, cfg config.PipelineConfi
 	if len(validPlan) == 0 {
 		validPlan = fallbackPlan(question, queryLimit)
 	}
+	validPlan = expandPlanForQuestion(question, validPlan, queryLimit)
 
 	executions := make([]queryExecution, 0, len(validPlan))
 	for _, item := range validPlan {
@@ -357,6 +369,9 @@ You must return json.
 Use only the retrieved query results. Do not invent facts.
 If the evidence is thin, say so in caveats.
 When you cite evidence, refer to rows using refs like q1.r1, q1.r2, q2.r1.
+Do not merely repeat regex phrases like "difficult to" or "annoying" if the evidence text supports a more concrete issue theme.
+Prefer concrete issue buckets such as paperwork burden, restrictive eligibility rules, residency duration limits, embassy or visa-process friction, or rejection risk when the retrieved evidence supports them.
+If the evidence does not support a concrete theme, say that directly.
 
 Output schema:
 {
@@ -475,6 +490,36 @@ func sanitizePlan(plan []plannedQuery, question string, defaultLimit int) []plan
 	return valid
 }
 
+func expandPlanForQuestion(question string, plan []plannedQuery, queryLimit int) []plannedQuery {
+	if !isPainPointQuestion(question) {
+		return plan
+	}
+	if len(plan) == 0 {
+		return plan
+	}
+	if hasQueryName(plan, "signal_evidence") {
+		return plan
+	}
+	if !hasQueryName(plan, "signal_summary") {
+		return plan
+	}
+
+	summaryPlan := firstPlanByQueryName(plan, "signal_summary")
+	if summaryPlan == nil {
+		return plan
+	}
+
+	evidenceFilters := cloneStringMap(summaryPlan.Filters)
+	expanded := append([]plannedQuery{}, plan...)
+	expanded = append(expanded, plannedQuery{
+		QueryName: "signal_evidence",
+		Filters:   evidenceFilters,
+		Limit:     queryLimit,
+		Reason:    "Automatic evidence retrieval added for pain-point style question",
+	})
+	return expanded
+}
+
 func sanitizeFilters(filters map[string]string) map[string]string {
 	allowed := map[string]struct{}{
 		"signal-type":     {},
@@ -524,6 +569,11 @@ func fallbackPlan(question string, queryLimit int) []plannedQuery {
 			{QueryName: "signal_evidence", Filters: map[string]string{"signal-type": inferSignalType(question)}, Limit: queryLimit, Reason: "Fallback evidence retrieval"},
 		}
 	}
+}
+
+func isPainPointQuestion(question string) bool {
+	lowerQuestion := strings.ToLower(question)
+	return strings.Contains(lowerQuestion, "pain point") || strings.Contains(lowerQuestion, "painpoint") || strings.Contains(lowerQuestion, "frustrat") || strings.Contains(lowerQuestion, "problem") || strings.Contains(lowerQuestion, "complaint")
 }
 
 func broadenPlanAfterZeroResults(question string, currentPlan []plannedQuery, queryLimit int) []plannedQuery {
@@ -704,6 +754,24 @@ func stringMapsEqual(left, right map[string]string) bool {
 	return true
 }
 
+func hasQueryName(plan []plannedQuery, queryName string) bool {
+	for _, item := range plan {
+		if item.QueryName == queryName {
+			return true
+		}
+	}
+	return false
+}
+
+func firstPlanByQueryName(plan []plannedQuery, queryName string) *plannedQuery {
+	for idx := range plan {
+		if plan[idx].QueryName == queryName {
+			return &plan[idx]
+		}
+	}
+	return nil
+}
+
 func totalRows(executions []queryExecution) int64 {
 	var total int64
 	for _, execution := range executions {
@@ -828,6 +896,14 @@ func cloneMap(in map[string]interface{}) map[string]interface{} {
 	return out
 }
 
+func cloneStringMap(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 func envOrDefault(key, fallback string) string {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
@@ -876,6 +952,34 @@ func trimForNote(value string, maxLen int) string {
 		return value
 	}
 	return value[:maxLen] + "..."
+}
+
+func renderAskText(output askOutput) string {
+	var lines []string
+	lines = append(lines, "Question: "+output.Question)
+	lines = append(lines, "")
+	lines = append(lines, output.Answer.Summary)
+
+	if len(output.Answer.Claims) > 0 {
+		lines = append(lines, "", "Key points:")
+		for _, claim := range output.Answer.Claims {
+			line := "- " + claim.Statement
+			if len(claim.EvidenceRefs) > 0 {
+				line += " [" + strings.Join(claim.EvidenceRefs, ", ") + "]"
+			}
+			lines = append(lines, line)
+		}
+	}
+
+	if len(output.Answer.Caveats) > 0 {
+		lines = append(lines, "", "Caveats:")
+		for _, caveat := range output.Answer.Caveats {
+			lines = append(lines, "- "+caveat)
+		}
+	}
+
+	lines = append(lines, "", "Debug: use `--format json` for the full query plan and evidence payload.")
+	return strings.Join(lines, "\n")
 }
 
 func gitSHA() string {

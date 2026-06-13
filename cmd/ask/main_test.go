@@ -104,6 +104,50 @@ func TestExtractKeywordFallbackSkipsGenericQuestionWords(t *testing.T) {
 	}
 }
 
+func TestExpandPlanForPainPointQuestionAddsEvidenceQuery(t *testing.T) {
+	plan := []plannedQuery{
+		{
+			QueryName: "signal_summary",
+			Filters: map[string]string{
+				"signal-type": "pain_point",
+				"topic-hint":  "visa",
+			},
+			Limit: 5,
+		},
+	}
+
+	got := expandPlanForQuestion("What pain points about visas come up most often?", plan, 6)
+	if len(got) != 2 {
+		t.Fatalf("expected expanded plan with evidence query, got %#v", got)
+	}
+	if got[1].QueryName != "signal_evidence" {
+		t.Fatalf("unexpected second query: %#v", got[1])
+	}
+	if got[1].Filters["topic-hint"] != "visa" {
+		t.Fatalf("unexpected evidence filters: %#v", got[1].Filters)
+	}
+}
+
+func TestRenderAskText(t *testing.T) {
+	text := renderAskText(askOutput{
+		Question: "What pain points about visas come up most often?",
+		Answer: answerResponse{
+			Summary: "Visa friction mostly clusters around difficulty, restrictions, and paperwork.",
+			Claims: []answerClaim{
+				{Statement: "Paperwork is a recurring issue.", EvidenceRefs: []string{"q2.r1"}},
+			},
+			Caveats: []string{"Small Jan-Feb 2021 slice."},
+		},
+	})
+
+	if !strings.Contains(text, "Question: What pain points about visas come up most often?") {
+		t.Fatalf("unexpected text output: %s", text)
+	}
+	if !strings.Contains(text, "Paperwork is a recurring issue. [q2.r1]") {
+		t.Fatalf("missing claim in text output: %s", text)
+	}
+}
+
 func TestRunAskFlowWithMockLLM(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
