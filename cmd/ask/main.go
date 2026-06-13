@@ -492,7 +492,16 @@ func sanitizeFilters(filters map[string]string) map[string]string {
 			continue
 		}
 		if key == "contains-text" {
-			sanitized[key] = strings.TrimSpace(value)
+			sanitized[key] = normalizeTopicKeyword(value)
+			continue
+		}
+		if key == "topic-hint" {
+			normalizedTopic := normalizeTopicKeyword(value)
+			if normalizedTopic == "" {
+				sanitized[key] = "*"
+			} else {
+				sanitized[key] = normalizedTopic
+			}
 			continue
 		}
 		sanitized[key] = normalizeWildcardFilter(value)
@@ -518,6 +527,10 @@ func fallbackPlan(question string, queryLimit int) []plannedQuery {
 }
 
 func broadenPlanAfterZeroResults(question string, currentPlan []plannedQuery, queryLimit int) []plannedQuery {
+	if topicAware := topicAwareFallbackPlan(question, currentPlan, queryLimit); len(topicAware) > 0 {
+		return topicAware
+	}
+
 	fallback := fallbackPlan(question, queryLimit)
 	if !plansEqual(currentPlan, fallback) {
 		return fallback
@@ -533,6 +546,41 @@ func broadenPlanAfterZeroResults(question string, currentPlan []plannedQuery, qu
 			},
 			Limit:  queryLimit,
 			Reason: "Fallback textual drilldown after zero structured retrieval results",
+		},
+	}
+}
+
+func topicAwareFallbackPlan(question string, currentPlan []plannedQuery, queryLimit int) []plannedQuery {
+	keyword := deriveTopicKeyword(question, currentPlan)
+	if keyword == "" {
+		return nil
+	}
+
+	signalType := deriveSignalTypeFromPlan(currentPlan)
+	if signalType == "" {
+		signalType = inferSignalType(question)
+	}
+
+	return []plannedQuery{
+		{
+			QueryName: "signal_summary",
+			Filters: map[string]string{
+				"signal-type":   signalType,
+				"topic-hint":    "*",
+				"contains-text": keyword,
+			},
+			Limit:  queryLimit,
+			Reason: fmt.Sprintf("Broadened fallback retrieval using signal type plus contains-text=%s", keyword),
+		},
+		{
+			QueryName: "signal_evidence",
+			Filters: map[string]string{
+				"signal-type":   signalType,
+				"topic-hint":    "*",
+				"contains-text": keyword,
+			},
+			Limit:  queryLimit,
+			Reason: fmt.Sprintf("Broadened evidence retrieval using signal type plus contains-text=%s", keyword),
 		},
 	}
 }
@@ -574,7 +622,7 @@ func inferIntent(question string) string {
 func extractKeywordFallback(question string) string {
 	words := strings.Fields(strings.ToLower(question))
 	stopwords := map[string]struct{}{
-		"what": {}, "which": {}, "where": {}, "when": {}, "does": {}, "with": {}, "from": {}, "that": {}, "this": {}, "have": {}, "show": {}, "find": {}, "about": {}, "into": {}, "their": {}, "there": {}, "would": {}, "could": {}, "should": {}, "people": {}, "posts": {}, "examples": {}, "example": {}, "quotes": {}, "quote": {},
+		"what": {}, "which": {}, "where": {}, "when": {}, "does": {}, "with": {}, "from": {}, "that": {}, "this": {}, "have": {}, "show": {}, "find": {}, "about": {}, "into": {}, "their": {}, "there": {}, "would": {}, "could": {}, "should": {}, "people": {}, "posts": {}, "examples": {}, "example": {}, "quotes": {}, "quote": {}, "pain": {}, "point": {}, "points": {}, "problem": {}, "problems": {}, "common": {}, "most": {}, "often": {}, "frequent": {}, "frequently": {}, "related": {}, "across": {}, "come": {}, "comes": {}, "up": {},
 	}
 	for _, word := range words {
 		word = strings.Trim(word, ".,?!:;\"'()[]{}")
@@ -584,9 +632,43 @@ func extractKeywordFallback(question string) string {
 		if _, ok := stopwords[word]; ok {
 			continue
 		}
-		return word
+		return normalizeTopicKeyword(word)
 	}
 	return ""
+}
+
+func deriveTopicKeyword(question string, currentPlan []plannedQuery) string {
+	for _, item := range currentPlan {
+		if topicHint := normalizeTopicKeyword(item.Filters["topic-hint"]); topicHint != "" && topicHint != "*" {
+			return topicHint
+		}
+		if containsText := normalizeTopicKeyword(item.Filters["contains-text"]); containsText != "" {
+			return containsText
+		}
+	}
+	return extractKeywordFallback(question)
+}
+
+func deriveSignalTypeFromPlan(currentPlan []plannedQuery) string {
+	for _, item := range currentPlan {
+		signalType := normalizeWildcardFilter(item.Filters["signal-type"])
+		if signalType != "" && signalType != "*" {
+			return signalType
+		}
+	}
+	return ""
+}
+
+func normalizeTopicKeyword(value string) string {
+	cleaned := strings.ToLower(strings.TrimSpace(value))
+	cleaned = strings.Trim(cleaned, ".,?!:;\"'()[]{}")
+	if cleaned == "" || cleaned == "*" {
+		return ""
+	}
+	if strings.HasSuffix(cleaned, "s") && len(cleaned) > 4 && !strings.HasSuffix(cleaned, "ss") {
+		cleaned = strings.TrimSuffix(cleaned, "s")
+	}
+	return cleaned
 }
 
 func allowedQueryName(name string) bool {

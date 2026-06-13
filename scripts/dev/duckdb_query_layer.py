@@ -328,6 +328,9 @@ def build_signal_conditions(args) -> str:
         clauses.append(f"lower(source_type) = '{sql_string(normalize_filter(args.source_type))}'")
     if normalize_filter(args.matched_pattern) != "*":
         clauses.append(f"lower(matched_pattern) = '{sql_string(normalize_filter(args.matched_pattern))}'")
+    contains_text = args.contains_text.strip().lower()
+    if contains_text:
+        clauses.append(f"lower(evidence_text) LIKE '%{sql_string(contains_text)}%'")
     return " AND ".join(clauses)
 
 

@@ -19,6 +19,7 @@ func TestSanitizePlanLimitsAndFilters(t *testing.T) {
 			QueryName: "signal_summary",
 			Filters: map[string]string{
 				"signal-type": "Pain_Point",
+				"topic-hint":  "Visas",
 				"bad-filter":  "ignored",
 			},
 			Limit: 99,
@@ -43,6 +44,9 @@ func TestSanitizePlanLimitsAndFilters(t *testing.T) {
 	if got[0].Filters["signal-type"] != "pain_point" {
 		t.Fatalf("unexpected filters: %#v", got[0].Filters)
 	}
+	if got[0].Filters["topic-hint"] != "visa" {
+		t.Fatalf("unexpected topic-hint normalization: %#v", got[0].Filters)
+	}
 	if _, ok := got[0].Filters["bad-filter"]; ok {
 		t.Fatalf("unexpected bad filter survived: %#v", got[0].Filters)
 	}
@@ -63,6 +67,39 @@ func TestFallbackPlanForPainPointQuestion(t *testing.T) {
 
 func TestExtractKeywordFallback(t *testing.T) {
 	if got := extractKeywordFallback("Find quotes about visa delays in travel posts"); got != "visa" {
+		t.Fatalf("unexpected fallback keyword: %q", got)
+	}
+}
+
+func TestTopicAwareFallbackPlanUsesSingularizedTopicHint(t *testing.T) {
+	currentPlan := []plannedQuery{
+		{
+			QueryName: "signal_summary",
+			Filters: map[string]string{
+				"signal-type": "pain_point",
+				"topic-hint":  "visas",
+			},
+			Limit: 6,
+		},
+	}
+
+	got := topicAwareFallbackPlan("What pain points about visas come up most often?", currentPlan, 6)
+	if len(got) != 2 {
+		t.Fatalf("expected two topic-aware fallback queries, got %#v", got)
+	}
+	if got[0].Filters["contains-text"] != "visa" {
+		t.Fatalf("unexpected contains-text: %#v", got[0].Filters)
+	}
+	if got[0].Filters["signal-type"] != "pain_point" {
+		t.Fatalf("unexpected signal-type: %#v", got[0].Filters)
+	}
+	if got[0].Filters["topic-hint"] != "*" {
+		t.Fatalf("expected wildcard topic-hint in broadened plan, got %#v", got[0].Filters)
+	}
+}
+
+func TestExtractKeywordFallbackSkipsGenericQuestionWords(t *testing.T) {
+	if got := extractKeywordFallback("What pain points about visas come up most often?"); got != "visa" {
 		t.Fatalf("unexpected fallback keyword: %q", got)
 	}
 }
