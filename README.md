@@ -30,6 +30,7 @@ Companion docs:
 
 - [SPEC.md](/Users/vatsalpatel/Desktop/Projects/argus/SPEC.md)
 - [IMPLEMENTATION_GUIDE.md](/Users/vatsalpatel/Desktop/Projects/argus/IMPLEMENTATION_GUIDE.md)
+- [Local product implementation plan](/Users/vatsalpatel/Desktop/Projects/argus/docs/plans/local-market-research-product-plan.md)
 
 ## Default Operating Model
 
