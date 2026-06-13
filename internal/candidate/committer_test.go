@@ -157,6 +157,9 @@ func TestCommitCandidatesIsTransactionalReconciledAndIdempotent(t *testing.T) {
 	if counts["ingest_batches"] != 1 || counts["batch_reconciliation"] != 1 {
 		t.Fatalf("expected one durable batch and reconciliation row: %v", counts)
 	}
+	if counts["scored_staging"] != 1 {
+		t.Fatalf("expected scored staging metadata to be durable: %v", counts)
+	}
 }
 
 func commitTestRelevanceConfig() config.RelevanceConfig {
@@ -231,7 +234,15 @@ import json
 import sys
 con = duckdb.connect(sys.argv[1], read_only=True)
 tables = ["documents", "document_relevance", "signals", "entities", "ingest_batches", "batch_reconciliation"]
-print(json.dumps({table: con.execute(f"SELECT count(*) FROM {table}").fetchone()[0] for table in tables}))
+counts = {table: con.execute(f"SELECT count(*) FROM {table}").fetchone()[0] for table in tables}
+counts["scored_staging"] = con.execute("""
+    SELECT count(*)
+    FROM staged_candidate_batches
+    WHERE score_path IS NOT NULL
+      AND score_checksum IS NOT NULL
+      AND score_bytes > 0
+""").fetchone()[0]
+print(json.dumps(counts))
 `
 	output, err := exec.Command("python3", "-c", script, databasePath).CombinedOutput()
 	if err != nil {

@@ -22,8 +22,8 @@ func TestProductMigrationsCreateCandidateLifecycleSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("migrate product schema: %v", err)
 	}
-	if result.SchemaVersion != 2 {
-		t.Fatalf("expected schema version 2, got %d", result.SchemaVersion)
+	if result.SchemaVersion != 3 {
+		t.Fatalf("expected schema version 3, got %d", result.SchemaVersion)
 	}
 
 	query := `
@@ -56,6 +56,31 @@ print(json.dumps(tables))
 	} {
 		if !contains(tables, required) {
 			t.Fatalf("required table %q is missing from %v", required, tables)
+		}
+	}
+
+	var stagingColumns []string
+	columnOutput, err := exec.Command(
+		"python3",
+		"-c",
+		`
+import duckdb
+import json
+import sys
+con = duckdb.connect(sys.argv[1], read_only=True)
+print(json.dumps([row[0] for row in con.execute("DESCRIBE staged_candidate_batches").fetchall()]))
+`,
+		databasePath,
+	).CombinedOutput()
+	if err != nil {
+		t.Fatalf("inspect staging columns: %v: %s", err, columnOutput)
+	}
+	if err := json.Unmarshal(columnOutput, &stagingColumns); err != nil {
+		t.Fatalf("parse staging columns: %v: %s", err, columnOutput)
+	}
+	for _, required := range []string{"score_path", "score_checksum", "score_bytes", "relevance_version", "relevance_config_hash"} {
+		if !contains(stagingColumns, required) {
+			t.Fatalf("required staging column %q is missing from %v", required, stagingColumns)
 		}
 	}
 }

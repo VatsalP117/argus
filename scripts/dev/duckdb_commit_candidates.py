@@ -34,7 +34,65 @@ def signal_values(mappings: list[dict]):
     )
 
 
-def existing_result(con, ingest_batch_id, scan_run_id, staging_batch_id):
+def ensure_score_metadata(
+    con,
+    staging_batch_id,
+    score_path,
+    score_checksum,
+    score_bytes,
+    relevance_version,
+    relevance_config_hash,
+):
+    current = con.execute(
+        """
+        SELECT
+            score_path,
+            score_checksum,
+            score_bytes,
+            relevance_version,
+            relevance_config_hash
+        FROM staged_candidate_batches
+        WHERE staging_batch_id = ?
+        """,
+        [staging_batch_id],
+    ).fetchone()
+    if not current:
+        return
+    expected = (
+        str(score_path),
+        score_checksum,
+        score_bytes,
+        relevance_version,
+        relevance_config_hash,
+    )
+    if all(value is None for value in current):
+        con.execute(
+            """
+            UPDATE staged_candidate_batches
+            SET score_path = ?,
+                score_checksum = ?,
+                score_bytes = ?,
+                relevance_version = ?,
+                relevance_config_hash = ?
+            WHERE staging_batch_id = ?
+            """,
+            [*expected, staging_batch_id],
+        )
+    elif current != expected:
+        raise ValueError("durable score staging metadata differs from commit input")
+
+
+def existing_result(
+    con,
+    ingest_batch_id,
+    scan_run_id,
+    staging_batch_id,
+    score_path,
+    score_checksum,
+    score_bytes,
+    relevance_version,
+    relevance_config_hash,
+):
     batch = con.execute(
         """
         SELECT
@@ -53,6 +111,15 @@ def existing_result(con, ingest_batch_id, scan_run_id, staging_batch_id):
     ).fetchone()
     if not batch:
         return None
+    ensure_score_metadata(
+        con,
+        staging_batch_id,
+        score_path,
+        score_checksum,
+        score_bytes,
+        relevance_version,
+        relevance_config_hash,
+    )
 
     reconciliation = con.execute(
         """
@@ -153,13 +220,22 @@ def commit(args, metadata):
         schema_version = con.execute(
             "SELECT coalesce(max(version), 0) FROM schema_migrations"
         ).fetchone()[0]
-        if schema_version < 2:
+        if schema_version < 3:
             raise ValueError(
                 f"database schema version {schema_version} is too old; run db-migrate"
             )
 
+        score_bytes = score_path.stat().st_size
         prior = existing_result(
-            con, ingest_batch_id, scan_run_id, staging_batch_id
+            con,
+            ingest_batch_id,
+            scan_run_id,
+            staging_batch_id,
+            score_path,
+            metadata["score_checksum"],
+            score_bytes,
+            relevance["version"],
+            metadata["relevance_config_hash"],
         )
         if prior:
             return prior
@@ -402,9 +478,14 @@ def commit(args, metadata):
                     staging_bytes,
                     candidate_rows,
                     validated_at,
-                    commit_started_at
+                    commit_started_at,
+                    score_path,
+                    score_checksum,
+                    score_bytes,
+                    relevance_version,
+                    relevance_config_hash
                 )
-                VALUES (?, ?, ?, ?, ?, ?, 'commit_started', ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, 'commit_started', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     staging_batch_id,
@@ -419,6 +500,11 @@ def commit(args, metadata):
                     rows_staged,
                     now,
                     now,
+                    str(score_path),
+                    metadata["score_checksum"],
+                    score_bytes,
+                    relevance["version"],
+                    metadata["relevance_config_hash"],
                 ],
             )
             con.execute(
