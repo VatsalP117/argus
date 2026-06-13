@@ -99,7 +99,7 @@ COPY (
         VALUES
             ('outside-prior', 'person1', 'randomcity', 'The embassy appointment system is frustrating and takes forever to use.', 3, 1610000000, 't3_thread1', 't3_thread1'),
             ('prior-only', 'person2', 'travel', 'Sharing a beautiful photograph and a cheerful story from yesterday morning.', 2, 1610000001, 't3_thread2', 't3_thread2'),
-            ('unrelated', 'person3', 'cats', 'A happy cat enjoys colorful blankets and long sleeping sessions at home.', 1, 1610000002, 't3_thread3', 't3_thread3')
+            ('unrelated', 'person3', 'cats', 'A happy cat enjoys colorful blankets at https://example.com/share?utm_name=ios_app every morning.', 1, 1610000002, 't3_thread3', 't3_thread3')
     ) AS t(id, author, subreddit, body, score, created_utc, link_id, parent_id)
 )
 TO '%s' (FORMAT PARQUET)

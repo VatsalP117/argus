@@ -128,13 +128,13 @@ def scan(args, rules):
         matched_term_cases = []
         for index, group in enumerate(rules["rule_groups"]):
             alias = f"rule_{index}"
-            expression = term_expression("lower(candidate_text)", group["terms"])
+            expression = term_expression("candidate_match_text", group["terms"])
             group_aliases.append(alias)
             group_columns.append(f"({expression}) AS {alias}")
             group_names.append(group["name"])
             for term in group["terms"]:
                 matched_term_cases.append(
-                    f"CASE WHEN {term_match_expression('lower(candidate_text)', term)} "
+                    f"CASE WHEN {term_match_expression('candidate_match_text', term)} "
                     f"THEN {sql_string(term)} ELSE NULL::VARCHAR END"
                 )
 
@@ -167,7 +167,14 @@ def scan(args, rules):
             f"""
             CREATE TEMP TABLE scanned_candidates AS
             WITH eligible AS (
-                SELECT *
+                SELECT
+                    *,
+                    lower(trim(regexp_replace(
+                        candidate_text,
+                        'https?://\\S+',
+                        ' ',
+                        'g'
+                    ))) AS candidate_match_text
                 FROM projected_source
                 WHERE length(candidate_text) >= {int(rules["minimum_text_length"])}
                   AND {excluded_expression}
@@ -220,7 +227,7 @@ def scan(args, rules):
             con.execute(
                 f"""
                 COPY (
-                    SELECT * EXCLUDE ({excluded_aliases})
+                    SELECT * EXCLUDE (candidate_match_text, {excluded_aliases})
                     FROM scanned_candidates
                 )
                 TO {output_sql}
