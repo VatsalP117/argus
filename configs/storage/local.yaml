@@ -1,0 +1,16 @@
+database_path: data/argus.duckdb
+migrations_dir: sql/migrations
+snapshots_dir: data/snapshots
+minimum_free_disk_bytes: 10000000000
+
+durable:
+  warn_bytes: 21000000000
+  stop_widening_bytes: 24000000000
+  retention_review_bytes: 27000000000
+  hard_limit_bytes: 30000000000
+
+temporary:
+  warn_bytes: 55000000000
+  stop_new_batch_bytes: 62000000000
+  hard_abort_bytes: 68000000000
+  max_staging_bytes: 8000000000
