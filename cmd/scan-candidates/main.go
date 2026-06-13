@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"argus/internal/candidate"
 	"argus/internal/config"
@@ -26,6 +27,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	var entryID string
 	var candidateConfigPath string
 	var outputPath string
+	var checkpointPath string
 	var scannerScript string
 	var duckDBMemoryLimit string
 	var duckDBThreads int
@@ -36,6 +38,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&entryID, "entry-id", "", "single manifest entry to scan")
 	flags.StringVar(&candidateConfigPath, "candidate-config", "configs/candidates/broad-v1.yaml", "path to broad candidate rules")
 	flags.StringVar(&outputPath, "output-path", "", "candidate Parquet output path")
+	flags.StringVar(&checkpointPath, "checkpoint-path", "", "scan checkpoint JSON path")
 	flags.StringVar(&scannerScript, "scanner-script", "scripts/dev/duckdb_scan_candidates.py", "path to DuckDB scanner adapter")
 	flags.StringVar(&duckDBMemoryLimit, "duckdb-memory-limit", "4GB", "DuckDB memory limit")
 	flags.IntVar(&duckDBThreads, "duckdb-threads", 4, "DuckDB worker threads")
@@ -79,6 +82,44 @@ func run(args []string, stdout, stderr io.Writer) int {
 			entry.EntryID+"-candidates.parquet",
 		)
 	}
+	if checkpointPath == "" {
+		checkpointPath = filepath.Join(
+			"state",
+			"checkpoints",
+			"candidate-scan",
+			sourceManifest.ManifestID,
+			entry.EntryID+".json",
+		)
+	}
+
+	configHash, err := candidate.FileSHA256(candidateConfigPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "checksum candidate config: %v\n", err)
+		return 1
+	}
+	if !force {
+		checkpoint, err := candidate.LoadScanCheckpoint(checkpointPath)
+		if err == nil {
+			reusable, reuseErr := checkpoint.Reusable(
+				sourceManifest.ManifestID,
+				entry,
+				rules.Version,
+				configHash,
+			)
+			if reuseErr != nil {
+				fmt.Fprintf(stderr, "validate scan checkpoint: %v\n", reuseErr)
+				return 1
+			}
+			if reusable {
+				result := checkpoint.Result
+				result.Status = "skipped_existing"
+				return writeResult(stdout, stderr, result)
+			}
+		} else if !os.IsNotExist(err) {
+			fmt.Fprintf(stderr, "load scan checkpoint: %v\n", err)
+			return 1
+		}
+	}
 	if !force {
 		if info, err := os.Stat(outputPath); err == nil && info.Size() > 0 {
 			fmt.Fprintf(stderr, "candidate output already exists: %s; use --force to replace it\n", outputPath)
@@ -89,6 +130,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	startedAt := time.Now()
 	result, err := candidate.Scan(context.Background(), candidate.Options{
 		Entry:          entry,
 		ManifestID:     sourceManifest.ManifestID,
@@ -105,6 +147,27 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
+	checkpoint, err := candidate.NewScanCheckpoint(
+		sourceManifest.ManifestID,
+		entry,
+		rules.Version,
+		configHash,
+		startedAt,
+		result,
+	)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if err := candidate.WriteScanCheckpoint(checkpointPath, checkpoint); err != nil {
+		fmt.Fprintf(stderr, "write scan checkpoint: %v\n", err)
+		return 1
+	}
+
+	return writeResult(stdout, stderr, result)
+}
+
+func writeResult(stdout, stderr io.Writer, result candidate.ScanResult) int {
 	encoder := json.NewEncoder(stdout)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(result); err != nil {

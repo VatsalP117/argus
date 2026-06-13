@@ -60,21 +60,20 @@ rule_groups:
 		t.Fatalf("resolve scanner script: %v", err)
 	}
 	outputPath := filepath.Join(dir, "candidates-output.parquet")
+	checkpointPath := filepath.Join(dir, "scan-checkpoint.json")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	exitCode := run(
-		[]string{
-			"--manifest", manifestPath,
-			"--entry-id", "comments-2021-01-000",
-			"--candidate-config", configPath,
-			"--output-path", outputPath,
-			"--scanner-script", scriptPath,
-			"--duckdb-temp-dir", filepath.Join(dir, "duckdb-tmp"),
-		},
-		&stdout,
-		&stderr,
-	)
+	args := []string{
+		"--manifest", manifestPath,
+		"--entry-id", "comments-2021-01-000",
+		"--candidate-config", configPath,
+		"--output-path", outputPath,
+		"--checkpoint-path", checkpointPath,
+		"--scanner-script", scriptPath,
+		"--duckdb-temp-dir", filepath.Join(dir, "duckdb-tmp"),
+	}
+	exitCode := run(args, &stdout, &stderr)
 	if exitCode != 0 {
 		t.Fatalf("expected success, code=%d stderr=%s", exitCode, stderr.String())
 	}
@@ -85,6 +84,19 @@ rule_groups:
 	}
 	if result.RowsSeen != 3 || result.RowsCandidates != 2 {
 		t.Fatalf("unexpected scan counts: %+v", result)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	exitCode = run(args, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("expected idempotent retry, code=%d stderr=%s", exitCode, stderr.String())
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("parse retry output: %v: %s", err, stdout.String())
+	}
+	if result.Status != "skipped_existing" {
+		t.Fatalf("expected skipped_existing retry, got %s", result.Status)
 	}
 }
 
