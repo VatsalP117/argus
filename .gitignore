@@ -35,6 +35,7 @@ data/exports/**
 state/checkpoints/**
 state/runs/**
 state/logs/**
+state/secrets/**
 !state/**/.gitkeep
 
 # Notebook noise
