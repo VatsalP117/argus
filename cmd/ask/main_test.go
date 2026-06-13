@@ -117,8 +117,8 @@ func TestExpandPlanForPainPointQuestionAddsEvidenceQuery(t *testing.T) {
 	}
 
 	got := expandPlanForQuestion("What pain points about visas come up most often?", plan, 6)
-	if len(got) != 2 {
-		t.Fatalf("expected expanded plan with evidence query, got %#v", got)
+	if len(got) != 3 {
+		t.Fatalf("expected expanded plan with evidence and source search, got %#v", got)
 	}
 	if got[1].QueryName != "signal_evidence" {
 		t.Fatalf("unexpected second query: %#v", got[1])
@@ -126,11 +126,36 @@ func TestExpandPlanForPainPointQuestionAddsEvidenceQuery(t *testing.T) {
 	if got[1].Filters["topic-hint"] != "visa" {
 		t.Fatalf("unexpected evidence filters: %#v", got[1].Filters)
 	}
+	if got[2].QueryName != "source_search" || got[2].Filters["contains-text"] != "visa" {
+		t.Fatalf("unexpected third query: %#v", got[2])
+	}
 }
 
 func TestRenderAskText(t *testing.T) {
 	text := renderAskText(askOutput{
 		Question: "What pain points about visas come up most often?",
+		QueryResults: []queryExecution{
+			{
+				Rows: []map[string]interface{}{
+					{
+						"subreddit":   "travel",
+						"created_at":  "2021-02-18T02:30:21",
+						"source_url":  "https://www.reddit.com/comments/demo/_/abc123",
+						"source_file": "https://example.com/shard.parquet",
+					},
+				},
+			},
+			{
+				Rows: []map[string]interface{}{
+					{
+						"subreddit":   "digitalnomad",
+						"created_at":  "2021-02-21T02:51:02",
+						"source_url":  "https://www.reddit.com/comments/demo/_/def456",
+						"source_file": "https://example.com/other.parquet",
+					},
+				},
+			},
+		},
 		Answer: answerResponse{
 			Summary: "Visa friction mostly clusters around difficulty, restrictions, and paperwork.",
 			Claims: []answerClaim{
@@ -145,6 +170,9 @@ func TestRenderAskText(t *testing.T) {
 	}
 	if !strings.Contains(text, "Paperwork is a recurring issue. [q2.r1]") {
 		t.Fatalf("missing claim in text output: %s", text)
+	}
+	if !strings.Contains(text, "Sources:") || !strings.Contains(text, "https://www.reddit.com/comments/demo/_/def456") {
+		t.Fatalf("missing sources section in text output: %s", text)
 	}
 }
 

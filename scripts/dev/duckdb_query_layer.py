@@ -153,6 +153,14 @@ def register_views(con, clean_dir: str, marts_dir: str, months: list[str]):
             score,
             body_clean AS analytical_text,
             text_length,
+            link_id,
+            parent_id,
+            NULL::VARCHAR AS title_clean,
+            CASE
+                WHEN link_id IS NOT NULL AND starts_with(link_id, 't3_')
+                    THEN 'https://www.reddit.com/comments/' || substr(link_id, 4) || '/_/' || id
+                ELSE source_file
+            END AS source_url,
             clean_run_id,
             source_file,
             manifest_id,
@@ -171,6 +179,10 @@ def register_views(con, clean_dir: str, marts_dir: str, months: list[str]):
             score,
             combined_text AS analytical_text,
             text_length,
+            NULL::VARCHAR AS link_id,
+            NULL::VARCHAR AS parent_id,
+            title_clean,
+            'https://www.reddit.com/comments/' || id AS source_url,
             clean_run_id,
             source_file,
             manifest_id,
@@ -229,6 +241,7 @@ def build_query_sql(args) -> str:
                 filtered.created_at,
                 source_documents.score,
                 left(filtered.evidence_text, 500) AS evidence_text,
+                source_documents.source_url,
                 filtered.source_file,
                 filtered.manifest_id,
                 filtered.clean_run_id,
@@ -296,6 +309,32 @@ def build_query_sql(args) -> str:
     if args.query_name == "source_search":
         conditions = build_source_conditions(args)
         return f"""
+            WITH ranked AS (
+                SELECT
+                    source_type,
+                    source_id,
+                    raw_id,
+                    subreddit,
+                    created_at,
+                    score,
+                    left(analytical_text, 500) AS analytical_text,
+                    source_url,
+                    clean_run_id,
+                    source_file,
+                    manifest_id,
+                    CASE
+                        WHEN regexp_matches(lower(analytical_text), '(difficult|frustrat|annoy|struggle|problem|issue|reject|refus|delay|paperwork|process|embassy|consulate|appointment|residenc|permit)')
+                            THEN 1
+                        ELSE 0
+                    END AS pain_context_score,
+                    CASE
+                        WHEN regexp_matches(lower(analytical_text), '(^|[^a-z])(card|credit|forex|lounge|amex|mastercard|scotiabank)([^a-z]|$)')
+                            THEN 1
+                        ELSE 0
+                    END AS likely_payment_context
+                FROM source_documents
+                WHERE {conditions}
+            )
             SELECT
                 source_type,
                 source_id,
@@ -303,13 +342,13 @@ def build_query_sql(args) -> str:
                 subreddit,
                 created_at,
                 score,
-                left(analytical_text, 500) AS analytical_text,
+                analytical_text,
+                source_url,
                 clean_run_id,
                 source_file,
                 manifest_id
-            FROM source_documents
-            WHERE {conditions}
-            ORDER BY created_at DESC, source_id
+            FROM ranked
+            ORDER BY pain_context_score DESC, likely_payment_context ASC, score DESC, created_at DESC, source_id
             LIMIT {limit}
         """
 

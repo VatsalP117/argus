@@ -517,6 +517,18 @@ func expandPlanForQuestion(question string, plan []plannedQuery, queryLimit int)
 		Limit:     queryLimit,
 		Reason:    "Automatic evidence retrieval added for pain-point style question",
 	})
+	if keyword := deriveTopicKeyword(question, plan); keyword != "" && !hasQueryName(expanded, "source_search") {
+		expanded = append(expanded, plannedQuery{
+			QueryName: "source_search",
+			Filters: map[string]string{
+				"contains-text": keyword,
+				"source-type":   "*",
+				"subreddit":     "*",
+			},
+			Limit:  minInt(queryLimit, 6),
+			Reason: fmt.Sprintf("Automatic topic text retrieval added for pain-point style question using contains-text=%s", keyword),
+		})
+	}
 	return expanded
 }
 
@@ -904,6 +916,13 @@ func cloneStringMap(in map[string]string) map[string]string {
 	return out
 }
 
+func minInt(left, right int) int {
+	if left < right {
+		return left
+	}
+	return right
+}
+
 func envOrDefault(key, fallback string) string {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
@@ -978,8 +997,79 @@ func renderAskText(output askOutput) string {
 		}
 	}
 
+	sources := renderSourceLinks(output)
+	if len(sources) > 0 {
+		lines = append(lines, "", "Sources:")
+		lines = append(lines, sources...)
+	}
+
 	lines = append(lines, "", "Debug: use `--format json` for the full query plan and evidence payload.")
 	return strings.Join(lines, "\n")
+}
+
+func renderSourceLinks(output askOutput) []string {
+	seen := map[string]struct{}{}
+	var refs []string
+	for _, claim := range output.Answer.Claims {
+		refs = append(refs, claim.EvidenceRefs...)
+	}
+	for _, evidence := range output.Answer.Evidence {
+		refs = append(refs, evidence.Ref)
+	}
+
+	var lines []string
+	for _, ref := range refs {
+		if _, ok := seen[ref]; ok {
+			continue
+		}
+		seen[ref] = struct{}{}
+		row, ok := lookupEvidenceRow(ref, output.QueryResults)
+		if !ok {
+			continue
+		}
+		url := firstNonEmpty(asString(row["source_url"]), asString(row["source_file"]))
+		if url == "" {
+			continue
+		}
+		subreddit := asString(row["subreddit"])
+		createdAt := asString(row["created_at"])
+		lines = append(lines, fmt.Sprintf("- %s | %s | %s", ref, firstNonEmpty(subreddit, "unknown-subreddit"), urlWithTimestamp(createdAt, url)))
+	}
+	return lines
+}
+
+func lookupEvidenceRow(ref string, queryResults []queryExecution) (map[string]interface{}, bool) {
+	var queryIndex int
+	var rowIndex int
+	if _, err := fmt.Sscanf(ref, "q%d.r%d", &queryIndex, &rowIndex); err != nil {
+		return nil, false
+	}
+	queryIndex--
+	rowIndex--
+	if queryIndex < 0 || queryIndex >= len(queryResults) {
+		return nil, false
+	}
+	rows := queryResults[queryIndex].Rows
+	if rowIndex < 0 || rowIndex >= len(rows) {
+		return nil, false
+	}
+	return rows[rowIndex], true
+}
+
+func asString(value interface{}) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	default:
+		return ""
+	}
+}
+
+func urlWithTimestamp(createdAt, url string) string {
+	if strings.TrimSpace(createdAt) == "" {
+		return url
+	}
+	return createdAt + " | " + url
 }
 
 func gitSHA() string {
