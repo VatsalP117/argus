@@ -66,6 +66,16 @@ def projection_sql(args):
                 NULL::VARCHAR AS title,
                 coalesce(body, '') AS original_text,
                 trim(regexp_replace(coalesce(body, ''), '\\s+', ' ', 'g')) AS candidate_text,
+                lower(trim(coalesce(body, ''))) = '[deleted]' AS is_deleted,
+                lower(trim(coalesce(body, ''))) = '[removed]' AS is_removed,
+                (
+                    lower(coalesce(author, '')) = 'automoderator'
+                    OR regexp_matches(lower(coalesce(author, '')), '(^|[^a-z])bot([^a-z]|$)')
+                    OR regexp_matches(
+                        lower(trim(coalesce(body, ''))),
+                        '^(i am a bot|this action was performed automatically|sorry .+ your submission has been removed)'
+                    )
+                ) AS is_bot_like,
                 CASE
                     WHEN link_id IS NOT NULL AND starts_with(link_id, 't3_')
                         THEN 'https://www.reddit.com/comments/' || substr(link_id, 4) || '/_/' || id
@@ -91,6 +101,22 @@ def projection_sql(args):
                 ' ',
                 'g'
             )) AS candidate_text,
+            (
+                lower(trim(coalesce(title, ''))) = '[deleted]'
+                OR lower(trim(coalesce(selftext, ''))) = '[deleted]'
+            ) AS is_deleted,
+            (
+                lower(trim(coalesce(title, ''))) = '[removed]'
+                OR lower(trim(coalesce(selftext, ''))) = '[removed]'
+            ) AS is_removed,
+            (
+                lower(coalesce(author, '')) = 'automoderator'
+                OR regexp_matches(lower(coalesce(author, '')), '(^|[^a-z])bot([^a-z]|$)')
+                OR regexp_matches(
+                    lower(trim(coalesce(title, '') || ' ' || coalesce(selftext, ''))),
+                    '^(i am a bot|this action was performed automatically|sorry .+ your submission has been removed)'
+                )
+            ) AS is_bot_like,
             'https://www.reddit.com/comments/' || id AS source_url
         FROM read_parquet({sql_string(args.input_url)})
     """

@@ -1,0 +1,76 @@
+version: deterministic_v1
+
+tiers:
+  a: 0.80
+  b: 0.60
+  c: 0.40
+
+domains:
+  - name: travel
+    subreddit_prior_weight: 0.15
+    required_any_terms:
+      - visa
+      - embassy
+      - consulate
+      - passport
+      - itinerary
+      - airline
+      - booking
+      - reservation
+      - hostel
+      - luggage
+      - customs
+      - immigration
+      - layover
+      - travel insurance
+      - roaming
+      - esim
+    group_weights:
+      travel_language: 0.50
+      pain_language: 0.15
+      request_intent: 0.20
+      workaround_language: 0.15
+      pricing_and_payment: 0.10
+      comparison_and_dissatisfaction: 0.10
+
+  - name: saas_opportunity
+    subreddit_prior_weight: 0.10
+    group_weights:
+      business_workflow_language: 0.35
+      product_and_tool_language: 0.25
+      request_intent: 0.25
+      workaround_language: 0.20
+      pain_language: 0.15
+      pricing_and_payment: 0.20
+      comparison_and_dissatisfaction: 0.15
+
+  - name: app_opportunity
+    subreddit_prior_weight: 0.10
+    group_weights:
+      product_and_tool_language: 0.35
+      request_intent: 0.30
+      workaround_language: 0.20
+      pain_language: 0.15
+      pricing_and_payment: 0.15
+      comparison_and_dissatisfaction: 0.15
+      travel_language: 0.10
+
+signal_mappings:
+  - rule_group: pain_language
+    signal_type: pain_point
+    score: 0.70
+  - rule_group: request_intent
+    signal_type: feature_request
+    score: 0.80
+  - rule_group: workaround_language
+    signal_type: workaround
+    score: 0.75
+  - rule_group: comparison_and_dissatisfaction
+    signal_type: competitor_dissatisfaction
+    score: 0.65
+  - rule_group: pricing_and_payment
+    signal_type: willingness_to_pay
+    score: 0.65
+  - rule_group: business_workflow_language
+    signal_type: workflow_fragmentation
+    score: 0.60
