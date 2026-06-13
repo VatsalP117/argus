@@ -48,11 +48,15 @@ func main() {
 	}
 
 	client := archive.NewHFClient()
+	archiveRevision, err := client.ResolveRevision(cfg.Archive.Repo)
+	if err != nil {
+		panic(err)
+	}
 	shardsByGroup := map[string][]archive.TreeFile{}
 
 	for _, rt := range recordTypes {
 		for _, m := range months {
-			shards, err := client.ListMonthShards(cfg.Archive.Repo, rt, m)
+			shards, err := client.ListMonthShardsAtRevision(cfg.Archive.Repo, archiveRevision, rt, m)
 			if err != nil {
 				panic(err)
 			}
@@ -60,7 +64,7 @@ func main() {
 		}
 	}
 
-	man := manifest.Build(cfg.Archive.Repo, cfg, months, recordTypes, shardsByGroup)
+	man := manifest.Build(cfg.Archive.Repo, archiveRevision, cfg, months, recordTypes, shardsByGroup)
 	if err := manifest.Write(outputPath, man); err != nil {
 		panic(err)
 	}

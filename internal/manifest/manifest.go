@@ -16,17 +16,21 @@ import (
 )
 
 type Entry struct {
-	EntryID    string `json:"entry_id"`
-	RecordType string `json:"record_type"`
-	Month      string `json:"month"`
-	Year       string `json:"year"`
-	MonthPart  string `json:"month_part"`
-	ShardPath  string `json:"shard_path"`
-	ShardName  string `json:"shard_name"`
-	HFURI      string `json:"hf_uri"`
-	ResolveURL string `json:"resolve_url"`
-	SizeBytes  int64  `json:"size_bytes"`
-	ShardIndex int    `json:"shard_index"`
+	EntryID         string `json:"entry_id"`
+	RecordType      string `json:"record_type"`
+	Month           string `json:"month"`
+	Year            string `json:"year"`
+	MonthPart       string `json:"month_part"`
+	ShardPath       string `json:"shard_path"`
+	ShardName       string `json:"shard_name"`
+	HFURI           string `json:"hf_uri"`
+	ResolveURL      string `json:"resolve_url"`
+	SizeBytes       int64  `json:"size_bytes"`
+	ShardIndex      int    `json:"shard_index"`
+	ArchiveRevision string `json:"archive_revision"`
+	SourceOID       string `json:"source_oid,omitempty"`
+	SourceIdentity  string `json:"source_identity"`
+	ProcessingState string `json:"processing_state"`
 }
 
 type Summary struct {
@@ -37,22 +41,26 @@ type Summary struct {
 }
 
 type Manifest struct {
-	ManifestID   string                 `json:"manifest_id"`
-	GeneratedAt  string                 `json:"generated_at"`
-	DatasetRepo  string                 `json:"dataset_repo"`
-	PipelineName string                 `json:"pipeline_name"`
-	PhaseTarget  string                 `json:"phase_target"`
-	Filters      map[string]interface{} `json:"filters"`
-	Summary      Summary                `json:"summary"`
-	Entries      []Entry                `json:"entries"`
+	ManifestID      string                 `json:"manifest_id"`
+	GeneratedAt     string                 `json:"generated_at"`
+	DatasetRepo     string                 `json:"dataset_repo"`
+	ArchiveRevision string                 `json:"archive_revision"`
+	PipelineName    string                 `json:"pipeline_name"`
+	PhaseTarget     string                 `json:"phase_target"`
+	Filters         map[string]interface{} `json:"filters"`
+	Summary         Summary                `json:"summary"`
+	Entries         []Entry                `json:"entries"`
 }
 
-func Build(repo string, cfg config.PipelineConfig, months []string, recordTypes []string, shardsByGroup map[string][]archive.TreeFile) Manifest {
+const ProcessingPending = "pending"
+
+func Build(repo, archiveRevision string, cfg config.PipelineConfig, months []string, recordTypes []string, shardsByGroup map[string][]archive.TreeFile) Manifest {
 	m := Manifest{
-		GeneratedAt:  time.Now().UTC().Format(time.RFC3339),
-		DatasetRepo:  repo,
-		PipelineName: cfg.PipelineName,
-		PhaseTarget:  cfg.PhaseTarget,
+		GeneratedAt:     time.Now().UTC().Format(time.RFC3339),
+		DatasetRepo:     repo,
+		ArchiveRevision: archiveRevision,
+		PipelineName:    cfg.PipelineName,
+		PhaseTarget:     cfg.PhaseTarget,
 		Filters: map[string]interface{}{
 			"months":       months,
 			"record_types": recordTypes,
@@ -71,18 +79,23 @@ func Build(repo string, cfg config.PipelineConfig, months []string, recordTypes 
 			shards := shardsByGroup[key]
 			parts := strings.Split(month, "-")
 			for idx, shard := range shards {
+				sourceIdentity := deterministicSourceIdentity(repo, archiveRevision, shard)
 				entry := Entry{
-					EntryID:    recordType + "-" + month + "-" + strings.TrimSuffix(archive.ShardName(shard.Path), ".parquet"),
-					RecordType: recordType,
-					Month:      month,
-					Year:       parts[0],
-					MonthPart:  parts[1],
-					ShardPath:  shard.Path,
-					ShardName:  archive.ShardName(shard.Path),
-					HFURI:      "hf://datasets/" + repo + "/" + shard.Path,
-					ResolveURL: archive.ResolveURL(repo, shard.Path),
-					SizeBytes:  shard.Size,
-					ShardIndex: idx,
+					EntryID:         recordType + "-" + month + "-" + strings.TrimSuffix(archive.ShardName(shard.Path), ".parquet"),
+					RecordType:      recordType,
+					Month:           month,
+					Year:            parts[0],
+					MonthPart:       parts[1],
+					ShardPath:       shard.Path,
+					ShardName:       archive.ShardName(shard.Path),
+					HFURI:           "hf://datasets/" + repo + "@" + archiveRevision + "/" + shard.Path,
+					ResolveURL:      archive.ResolveURLAtRevision(repo, archiveRevision, shard.Path),
+					SizeBytes:       shard.Size,
+					ShardIndex:      idx,
+					ArchiveRevision: archiveRevision,
+					SourceOID:       shard.OID,
+					SourceIdentity:  sourceIdentity,
+					ProcessingState: ProcessingPending,
 				}
 				m.Entries = append(m.Entries, entry)
 				m.Summary.EntryCount++
@@ -103,14 +116,25 @@ func Build(repo string, cfg config.PipelineConfig, months []string, recordTypes 
 		return m.Entries[i].ShardPath < m.Entries[j].ShardPath
 	})
 
-	m.ManifestID = deterministicManifestID(cfg.PipelineName, repo, months, recordTypes, cfg.Subreddits, m.Entries)
+	m.ManifestID = deterministicManifestID(cfg.PipelineName, repo, archiveRevision, months, recordTypes, cfg.Subreddits, m.Entries)
 	return m
 }
 
-func deterministicManifestID(pipelineName, repo string, months, recordTypes, subreddits []string, entries []Entry) string {
+func deterministicSourceIdentity(repo, archiveRevision string, shard archive.TreeFile) string {
+	h := sha256.New()
+	writeHashPart(h, repo)
+	writeHashPart(h, archiveRevision)
+	writeHashPart(h, shard.Path)
+	writeHashPart(h, strconv.FormatInt(shard.Size, 10))
+	writeHashPart(h, shard.OID)
+	return "hf-shard-sha256:" + hex.EncodeToString(h.Sum(nil))
+}
+
+func deterministicManifestID(pipelineName, repo, archiveRevision string, months, recordTypes, subreddits []string, entries []Entry) string {
 	h := sha256.New()
 	writeHashPart(h, pipelineName)
 	writeHashPart(h, repo)
+	writeHashPart(h, archiveRevision)
 	for _, item := range months {
 		writeHashPart(h, item)
 	}
@@ -122,8 +146,7 @@ func deterministicManifestID(pipelineName, repo string, months, recordTypes, sub
 	}
 	for _, entry := range entries {
 		writeHashPart(h, entry.EntryID)
-		writeHashPart(h, entry.ShardPath)
-		writeHashPart(h, strconv.FormatInt(entry.SizeBytes, 10))
+		writeHashPart(h, entry.SourceIdentity)
 	}
 	return pipelineName + "-" + hex.EncodeToString(h.Sum(nil))[:16]
 }
