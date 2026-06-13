@@ -774,7 +774,7 @@ Minimum launch gates:
 
 - keep API keys only in ignored environment files
 - hash author names in durable analytical tables by default
-- store the author-hash salt outside the database in an ignored environment file
+- store the author-hash salt outside the database in an ignored environment file or private ignored local secret file
 - retain original author only if a documented research need exists
 - never expose local DuckDB over a public network
 - treat source text as potentially sensitive user-generated content
@@ -822,10 +822,12 @@ The first implementation sequence should be:
 - [x] Add broad candidate rule configuration.
 - [x] Add `cmd/scan-candidates`.
 - [x] Add staging and reconciliation schemas.
-- [ ] Add `cmd/commit-candidates`.
-- [ ] Add post-commit validation and cleanup.
-- [x] Run a one-shard candidate scan sample and publish the first yield report.
+- [x] Add `cmd/commit-candidates`.
+- [x] Add post-commit validation and cleanup.
+- [x] Run a one-shard candidate scan, durable commit, and cleanup sample and publish the first yield report.
 
-Items 1-7 and the candidate-stage portion of item 10 were completed on `2026-06-13`. The local database is initialized at schema version `2`. The next executor should implement `cmd/commit-candidates`; the one-shard sample does not yet prove durable commit or cleanup safety.
+The full immediate backlog was completed on `2026-06-13`. The local database is initialized at schema version `3`, and one shard completed scan, scoring, transactional commit, reconciliation, validation, and audited cleanup.
+
+The next executor should build the labelled relevance evaluation set and calibrate `deterministic_v2`. Do not widen ingestion yet: the first durable sample exposed false positives around the `Visa` payment brand, political immigration discussion, and generic workflow/product vocabulary.
 
 This sequence proves the storage lifecycle before spending time on the web product or a large ingest.

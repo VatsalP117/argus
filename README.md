@@ -87,6 +87,24 @@ Candidate rules come from [configs/candidates/broad-v1.yaml](/Users/vatsalpatel/
 
 See [docs/runbooks/phase-7-candidate-scan.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-7-candidate-scan.md) and the [first broad shard report](/Users/vatsalpatel/Desktop/Projects/argus/docs/reports/broad-candidate-shard-sample-2026-06-13.md).
 
+Score, commit, and clean a validated shard:
+
+```bash
+go run ./cmd/score-candidates \
+  --scan-checkpoint state/checkpoints/candidate-scan/<manifest-id>/<entry-id>.json
+
+go run ./cmd/commit-candidates \
+  --manifest /tmp/argus-jan-comments-pinned.json \
+  --entry-id comments-2021-01-000
+
+go run ./cmd/cleanup-staging \
+  --ingest-batch-id <validated-ingest-batch-id>
+```
+
+`commit-candidates` writes documents, domain relevance, signals, entities, and reconciliation in one transaction. `cleanup-staging` refuses unvalidated or checksum-mismatched batches and records a cleanup event for each deleted file.
+
+See [docs/runbooks/phase-8-durable-candidate-commit.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-8-durable-candidate-commit.md).
+
 ## Initial Pilot
 
 The first pilot is intentionally narrow:
