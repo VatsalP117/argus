@@ -1,0 +1,158 @@
+version: broad_v1
+minimum_text_length: 40
+
+excluded_exact_text:
+  - "[deleted]"
+  - "[removed]"
+
+# These communities increase confidence but never act as an ingest requirement.
+subreddit_priors:
+  - travel
+  - solotravel
+  - shoestring
+  - onebag
+  - digitalnomad
+  - travelhacks
+  - flights
+  - visas
+  - immigration
+  - startups
+  - entrepreneur
+  - smallbusiness
+  - saas
+  - sideproject
+  - productivity
+  - nocode
+  - webdev
+  - freelancing
+
+rule_groups:
+  - name: pain_language
+    terms:
+      - frustrating
+      - annoying
+      - painful
+      - difficult to
+      - impossible to
+      - struggle with
+      - hate when
+      - worst part
+      - keeps failing
+      - waste of time
+      - takes forever
+      - confusing
+      - unreliable
+
+  - name: request_intent
+    terms:
+      - i wish there was
+      - someone should build
+      - why is there no
+      - looking for an app
+      - need an app
+      - any tool for
+      - what do you use for
+      - looking for recommendations
+      - is there software
+      - feature request
+
+  - name: workaround_language
+    terms:
+      - workaround
+      - manual process
+      - manually
+      - spreadsheet
+      - google sheet
+      - excel
+      - copy and paste
+      - cobbled together
+      - hacky
+      - ended up using
+      - do this instead
+      - multiple tools
+
+  - name: product_and_tool_language
+    terms:
+      - app
+      - software
+      - platform
+      - plugin
+      - extension
+      - api
+      - dashboard
+      - automation
+      - integrate
+      - integration
+      - sync
+      - workflow
+      - notification
+
+  - name: travel_language
+    terms:
+      - visa
+      - embassy
+      - consulate
+      - passport
+      - itinerary
+      - airport
+      - airline
+      - flight
+      - booking
+      - reservation
+      - hotel
+      - hostel
+      - baggage
+      - luggage
+      - customs
+      - immigration
+      - layover
+      - travel insurance
+      - roaming
+      - esim
+      - refund
+
+  - name: business_workflow_language
+    terms:
+      - client onboarding
+      - invoicing
+      - invoice
+      - crm
+      - lead generation
+      - customer support
+      - project management
+      - reporting
+      - scheduling
+      - appointment
+      - inventory
+      - bookkeeping
+      - approval process
+      - data entry
+      - repetitive task
+
+  - name: pricing_and_payment
+    terms:
+      - willing to pay
+      - would pay
+      - pricing
+      - subscription
+      - too expensive
+      - overpriced
+      - payment
+      - checkout
+      - billing
+      - chargeback
+      - refund
+      - hidden fee
+
+  - name: comparison_and_dissatisfaction
+    terms:
+      - alternative to
+      - switched from
+      - better than
+      - compared with
+      - missing feature
+      - customer service
+      - does not work
+      - doesn't work
+      - stopped working
+      - cancelled because
