@@ -815,15 +815,17 @@ Do not begin the full monthly scan until steps 1-5 are complete:
 
 The first implementation sequence should be:
 
-1. Add ADR-002 and database path configuration.
-2. Add `cmd/db-migrate`.
-3. Add `cmd/db-status`.
-4. Extend manifests with archive revision and source identity.
-5. Add broad candidate rule configuration.
-6. Add `cmd/scan-candidates`.
-7. Add staging and reconciliation schemas.
-8. Add `cmd/commit-candidates`.
-9. Add post-commit validation and cleanup.
-10. Run a one-shard sample and publish the first yield report.
+- [x] Add ADR-002 and database path configuration.
+- [x] Add `cmd/db-migrate`.
+- [x] Add `cmd/db-status`.
+- [x] Extend manifests with archive revision, source identity, and initial processing state.
+- [ ] Add broad candidate rule configuration.
+- [ ] Add `cmd/scan-candidates`.
+- [ ] Add staging and reconciliation schemas.
+- [ ] Add `cmd/commit-candidates`.
+- [ ] Add post-commit validation and cleanup.
+- [ ] Run a one-shard sample and publish the first yield report.
+
+Items 1-4 were completed on `2026-06-13`. The local database is initialized at schema version `1`; the next executor should begin with broad candidate rule configuration.
 
 This sequence proves the storage lifecycle before spending time on the web product or a large ingest.

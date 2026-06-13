@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -97,5 +98,37 @@ func TestStatusReportsSchemaAndCapacityState(t *testing.T) {
 	}
 	if !result.CanStartNewBatch {
 		t.Fatal("expected capacity policy to allow a new batch")
+	}
+}
+
+func TestMigrateRejectsChangedAppliedMigration(t *testing.T) {
+	dir := t.TempDir()
+	migrationsDir := filepath.Join(dir, "migrations")
+	if err := os.MkdirAll(migrationsDir, 0o755); err != nil {
+		t.Fatalf("create migrations dir: %v", err)
+	}
+	migrationPath := filepath.Join(migrationsDir, "001_create_example.sql")
+	if err := os.WriteFile(migrationPath, []byte("CREATE TABLE example (id BIGINT);"), 0o644); err != nil {
+		t.Fatalf("write migration: %v", err)
+	}
+
+	options := AdminOptions{
+		DatabasePath:  filepath.Join(dir, "argus.duckdb"),
+		MigrationsDir: migrationsDir,
+		ScriptPath:    filepath.Join("..", "..", "scripts", "dev", "duckdb_admin.py"),
+	}
+	if _, err := Migrate(context.Background(), options); err != nil {
+		t.Fatalf("first migrate: %v", err)
+	}
+	if err := os.WriteFile(migrationPath, []byte("CREATE TABLE changed (id BIGINT);"), 0o644); err != nil {
+		t.Fatalf("change migration: %v", err)
+	}
+
+	_, err := Migrate(context.Background(), options)
+	if err == nil {
+		t.Fatal("expected changed migration to be rejected")
+	}
+	if !strings.Contains(err.Error(), "checksum differs") {
+		t.Fatalf("expected checksum error, got %v", err)
 	}
 }

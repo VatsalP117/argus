@@ -25,6 +25,7 @@ Current implementation status:
 - Phase 3: clean-layer implementation completed for the frozen Jan-Feb 2021 V0 slice
 - Phase 4: deterministic signal enrichment and first research queries implemented for V0
 - Phase 5: evidence export workflow implemented for V0
+- Product expansion foundation: durable DuckDB migrations, capacity status, and pinned source manifests implemented
 
 Companion docs:
 
@@ -39,9 +40,28 @@ Argus v1 is local-first.
 Default stack:
 
 - DuckDB for remote archive access and local analytics
-- Parquet for raw, clean, and mart layers
+- DuckDB for the durable research corpus
+- Parquet for bounded temporary staging and the frozen POC layers
 - Go for ingestion and pipeline tooling
 - checked-in SQL plus configs for repeatable research workflows
+
+## Durable DuckDB Foundation
+
+Create or upgrade the local durable database:
+
+```bash
+go run ./cmd/db-migrate
+```
+
+Inspect schema version, database size, free disk, and the configured storage thresholds:
+
+```bash
+go run ./cmd/db-status
+```
+
+Both commands read [configs/storage/local.yaml](/Users/vatsalpatel/Desktop/Projects/argus/configs/storage/local.yaml). Applied migrations are checksum-protected and safe to rerun.
+
+New manifests pin the Hugging Face dataset revision and shard object identity. Existing frozen POC manifests remain readable, but regenerate a manifest before using the new durable ingestion path.
 
 ## Initial Pilot
 
