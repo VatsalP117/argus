@@ -63,6 +63,30 @@ Both commands read [configs/storage/local.yaml](/Users/vatsalpatel/Desktop/Proje
 
 New manifests pin the Hugging Face dataset revision and shard object identity. Existing frozen POC manifests remain readable, but regenerate a manifest before using the new durable ingestion path.
 
+## Broad Candidate Scan
+
+Generate a fresh pinned manifest before scanning:
+
+```bash
+go run ./cmd/manifest-builder \
+  --pipeline configs/pipelines/pilot-travel-q1-2021.yaml \
+  --month 2021-01 \
+  --record-type comments \
+  --output /tmp/argus-jan-comments-pinned.json
+```
+
+Scan exactly one bounded manifest entry:
+
+```bash
+go run ./cmd/scan-candidates \
+  --manifest /tmp/argus-jan-comments-pinned.json \
+  --entry-id comments-2021-01-000
+```
+
+Candidate rules come from [configs/candidates/broad-v1.yaml](/Users/vatsalpatel/Desktop/Projects/argus/configs/candidates/broad-v1.yaml). Subreddit membership adds recall but is not required. Completed scans write checksum-backed checkpoints; an unchanged retry returns `skipped_existing`.
+
+See [docs/runbooks/phase-7-candidate-scan.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-7-candidate-scan.md) and the [first broad shard report](/Users/vatsalpatel/Desktop/Projects/argus/docs/reports/broad-candidate-shard-sample-2026-06-13.md).
+
 ## Initial Pilot
 
 The first pilot is intentionally narrow:

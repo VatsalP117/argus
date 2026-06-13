@@ -819,13 +819,13 @@ The first implementation sequence should be:
 - [x] Add `cmd/db-migrate`.
 - [x] Add `cmd/db-status`.
 - [x] Extend manifests with archive revision, source identity, and initial processing state.
-- [ ] Add broad candidate rule configuration.
-- [ ] Add `cmd/scan-candidates`.
-- [ ] Add staging and reconciliation schemas.
+- [x] Add broad candidate rule configuration.
+- [x] Add `cmd/scan-candidates`.
+- [x] Add staging and reconciliation schemas.
 - [ ] Add `cmd/commit-candidates`.
 - [ ] Add post-commit validation and cleanup.
-- [ ] Run a one-shard sample and publish the first yield report.
+- [x] Run a one-shard candidate scan sample and publish the first yield report.
 
-Items 1-4 were completed on `2026-06-13`. The local database is initialized at schema version `1`; the next executor should begin with broad candidate rule configuration.
+Items 1-7 and the candidate-stage portion of item 10 were completed on `2026-06-13`. The local database is initialized at schema version `2`. The next executor should implement `cmd/commit-candidates`; the one-shard sample does not yet prove durable commit or cleanup safety.
 
 This sequence proves the storage lifecycle before spending time on the web product or a large ingest.
