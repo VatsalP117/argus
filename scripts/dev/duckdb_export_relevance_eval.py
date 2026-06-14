@@ -5,18 +5,31 @@ import sys
 from pathlib import Path
 
 
+STRATA = ("retain", "evaluate", "discard")
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--candidate-path", required=True)
     parser.add_argument("--score-path", required=True)
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--sample-per-stratum", type=int, required=True)
+    parser.add_argument("--retain-sample", type=int, required=True)
+    parser.add_argument("--evaluate-sample", type=int, required=True)
+    parser.add_argument("--discard-sample", type=int, required=True)
     parser.add_argument("--seed", required=True)
     return parser.parse_args()
 
 
 def sql_string(value: str):
     return "'" + value.replace("'", "''") + "'"
+
+
+def sample_limit(args, stratum: str) -> int:
+    value = getattr(args, stratum.replace("-", "_") + "_sample")
+    if value < 0:
+        return args.sample_per_stratum
+    return value
 
 
 def export_evaluation(args):
@@ -34,10 +47,18 @@ def export_evaluation(args):
     if args.sample_per_stratum <= 0:
         raise ValueError("sample per stratum must be positive")
 
+    for stratum in STRATA:
+        limit = sample_limit(args, stratum)
+        if limit < 0:
+            raise ValueError(f"{stratum} sample must be non-negative")
+
     output_path = Path(args.output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temp_output_path = output_path.with_name(output_path.name + ".tmp")
     temp_output_path.unlink(missing_ok=True)
+
+    limits = {stratum: sample_limit(args, stratum) for stratum in STRATA}
+    seed_literal = sql_string(args.seed)
 
     con = duckdb.connect()
     try:
@@ -108,25 +129,47 @@ def export_evaluation(args):
                     s.predicted_tier,
                     s.predicted_decision,
                     s.sample_stratum,
+                    count(*) OVER (PARTITION BY s.sample_stratum) AS stratum_population,
                     row_number() OVER (
                         PARTITION BY s.sample_stratum
                         ORDER BY md5(
                             c.source_type || ':' || c.source_id || ':' ||
-                            {sql_string(args.seed)}
+                            {seed_literal}
                         )
                     ) AS sample_rank
                 FROM candidate_source c
                 JOIN score_summary s USING (source_type, source_id)
             )
             SELECT
-                * EXCLUDE (sample_rank),
+                source_type,
+                source_id,
+                subreddit,
+                text_excerpt,
+                source_url,
+                matched_terms,
+                matched_rule_groups,
+                v1_travel_score,
+                v1_saas_opportunity_score,
+                v1_app_opportunity_score,
+                predicted_domain,
+                predicted_score,
+                predicted_tier,
+                predicted_decision,
+                sample_stratum,
+                stratum_population,
+                sample_rank,
+                {seed_literal} AS sampling_seed,
                 NULL::VARCHAR AS label_travel,
                 NULL::VARCHAR AS label_saas_opportunity,
                 NULL::VARCHAR AS label_app_opportunity,
                 NULL::VARCHAR AS false_positive_category,
                 NULL::VARCHAR AS label_notes
             FROM eligible
-            WHERE sample_rank <= {args.sample_per_stratum}
+            WHERE sample_rank <= CASE sample_stratum
+                WHEN 'retain' THEN {limits['retain'] if limits['retain'] > 0 else 'stratum_population'}
+                WHEN 'evaluate' THEN {limits['evaluate'] if limits['evaluate'] > 0 else 'stratum_population'}
+                ELSE {limits['discard'] if limits['discard'] > 0 else 'stratum_population'}
+            END
             ORDER BY
                 CASE sample_stratum
                     WHEN 'retain' THEN 1
@@ -157,12 +200,25 @@ def export_evaluation(args):
                 """
             ).fetchall()
         }
-        for stratum in ["retain", "evaluate", "discard"]:
+        stratum_populations = {
+            stratum: population
+            for stratum, population in con.execute(
+                """
+                SELECT sample_stratum, max(stratum_population)
+                FROM evaluation_sample
+                GROUP BY sample_stratum
+                """
+            ).fetchall()
+        }
+        for stratum in STRATA:
             stratum_counts.setdefault(stratum, 0)
+            stratum_populations.setdefault(stratum, 0)
         return {
             "status": "completed",
             "rows_exported": sum(stratum_counts.values()),
             "stratum_counts": stratum_counts,
+            "stratum_populations": stratum_populations,
+            "sampling_seed": args.seed,
             "output_path": str(output_path),
         }
     finally:

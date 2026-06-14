@@ -26,6 +26,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	var exporterScript string
 	var seed string
 	var samplePerStratum int
+	var retainSample int
+	var evaluateSample int
+	var discardSample int
 	var force bool
 
 	flags.StringVar(&scanCheckpointPath, "scan-checkpoint", "", "completed candidate scan checkpoint")
@@ -34,6 +37,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&exporterScript, "exporter-script", "scripts/dev/duckdb_export_relevance_eval.py", "DuckDB evaluation exporter")
 	flags.StringVar(&seed, "seed", "relevance-eval-v1", "stable sampling seed")
 	flags.IntVar(&samplePerStratum, "sample-per-stratum", 100, "rows sampled from each decision stratum")
+	flags.IntVar(&retainSample, "retain-sample", -1, "retained rows to export; 0 means all, -1 uses sample-per-stratum")
+	flags.IntVar(&evaluateSample, "evaluate-sample", -1, "evaluate rows to export; 0 means all, -1 uses sample-per-stratum")
+	flags.IntVar(&discardSample, "discard-sample", -1, "discard rows to export; 0 means all, -1 uses sample-per-stratum")
 	flags.BoolVar(&force, "force", false, "replace an existing label fixture")
 	if err := flags.Parse(args); err != nil {
 		return 2
@@ -81,6 +87,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		OutputPath:       outputPath,
 		ScriptPath:       exporterScript,
 		SamplePerStratum: samplePerStratum,
+		RetainSample:     retainSample,
+		EvaluateSample:   evaluateSample,
+		DiscardSample:    discardSample,
 		Seed:             seed,
 	})
 	if err != nil {

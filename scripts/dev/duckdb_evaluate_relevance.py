@@ -13,6 +13,10 @@ def parse_args():
     parser.add_argument("--labels-path", required=True)
     parser.add_argument("--score-path", required=True)
     parser.add_argument("--minimum-retain-precision", type=float, required=True)
+    parser.add_argument("--minimum-weighted-recall", type=float, default=0.60)
+    parser.add_argument("--minimum-domain-precision", type=float, default=0.60)
+    parser.add_argument("--minimum-domain-retained-count", type=int, default=10)
+    parser.add_argument("--max-false-positive-category-rate", type=float, default=0.20)
     return parser.parse_args()
 
 
@@ -52,6 +56,8 @@ def evaluate(args):
         raise ValueError(f"score input does not exist: {score_path}")
     if not 0 < args.minimum_retain_precision <= 1:
         raise ValueError("minimum retain precision must be within (0, 1]")
+    if not 0 <= args.minimum_weighted_recall <= 1:
+        raise ValueError("minimum weighted recall must be within [0, 1]")
 
     con = duckdb.connect()
     try:
@@ -86,6 +92,21 @@ def evaluate(args):
         if duplicate_labels:
             raise ValueError("label fixture contains duplicate source IDs")
 
+        required_columns = {
+            "source_type",
+            "source_id",
+            "sample_stratum",
+            "stratum_population",
+            "sample_rank",
+            "sampling_seed",
+        }
+        label_columns = {
+            row[0] for row in con.execute("DESCRIBE labels").fetchall()
+        }
+        missing = required_columns - label_columns
+        if missing:
+            raise ValueError(f"label fixture missing population metadata columns: {sorted(missing)}")
+
         for domain in DOMAINS:
             column = f"label_{domain}"
             invalid = int(
@@ -113,6 +134,38 @@ def evaluate(args):
         if joined_score_rows != rows_labeled * len(DOMAINS):
             raise ValueError(
                 "score input does not contain exactly one row per labelled candidate and domain"
+            )
+
+        inconsistent_population = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM (
+                    SELECT sample_stratum, count(DISTINCT stratum_population) AS distinct_populations
+                    FROM labels
+                    GROUP BY sample_stratum
+                )
+                WHERE distinct_populations > 1
+                """
+            ).fetchone()[0]
+        )
+        if inconsistent_population:
+            raise ValueError("stratum_population is inconsistent within a stratum")
+
+        retain_population, retain_sample_size = con.execute(
+            """
+            SELECT
+                max(stratum_population),
+                count(*)
+            FROM labels
+            WHERE sample_stratum = 'retain'
+            """
+        ).fetchone()
+        retain_population = int(retain_population or 0)
+        retain_sample_size = int(retain_sample_size or 0)
+        if retain_sample_size != retain_population:
+            raise ValueError(
+                f"retain fixture must include all retained rows: sample={retain_sample_size}, population={retain_population}"
             )
 
         score_columns = {
@@ -173,6 +226,45 @@ def evaluate(args):
             """
         ).fetchone()
         candidate = metric(*map(int, candidate_counts))
+        candidate["exact_retained_precision"] = candidate["retained_precision"]
+        candidate["fixture_recall"] = candidate["retained_recall"]
+
+        stratum_stats = con.execute(
+            """
+            SELECT
+                sample_stratum,
+                max(stratum_population) AS population,
+                count(*) AS sample_size,
+                count(*) FILTER (
+                    WHERE label_travel = '1'
+                       OR label_saas_opportunity = '1'
+                       OR label_app_opportunity = '1'
+                ) AS positive_count
+            FROM labels
+            GROUP BY sample_stratum
+            ORDER BY sample_stratum
+            """
+        ).fetchall()
+        strata = {}
+        estimated_total_relevant = 0.0
+        for stratum, population, sample_size, positive_count in stratum_stats:
+            population = int(population or 0)
+            sample_size = int(sample_size or 0)
+            positive_count = int(positive_count or 0)
+            rate = positive_count / sample_size if sample_size else 0.0
+            strata[stratum] = {
+                "population": population,
+                "sample_size": sample_size,
+                "positive_count": positive_count,
+                "sampled_positive_rate": rate,
+            }
+            estimated_total_relevant += population * rate
+
+        candidate["estimated_total_relevant"] = estimated_total_relevant
+        candidate["weighted_retained_recall_estimate"] = (
+            candidate["true_positive_retained"] / estimated_total_relevant
+            if estimated_total_relevant > 0 else 0.0
+        )
 
         trap_leakage = {
             category: int(count)
@@ -197,18 +289,107 @@ def evaluate(args):
             ).fetchall()
         }
 
+        missing_source_url_count = int(
+            con.execute(
+                """
+                WITH candidate_scores AS (
+                    SELECT
+                        source_type,
+                        source_id,
+                        bool_or(decision = 'retain') AS retained
+                    FROM scores
+                    GROUP BY source_type, source_id
+                )
+                SELECT count(*)
+                FROM labels
+                JOIN candidate_scores USING (source_type, source_id)
+                WHERE retained
+                  AND coalesce(source_url, '') = ''
+                """
+            ).fetchone()[0]
+        )
+
+        retained_count = int(candidate["retained_predictions"])
+        category_rate_violations = {
+            category: count
+            for category, count in trap_leakage.items()
+            if retained_count > 0 and count / retained_count > args.max_false_positive_category_rate
+        }
+
+        domain_precision_failures = {
+            domain: metrics
+            for domain, metrics in domains.items()
+            if metrics["retained_predictions"] >= args.minimum_domain_retained_count
+            and metrics["retained_precision"] < args.minimum_domain_precision
+        }
+
+        visa_retained_false_positives = int(
+            con.execute(
+                """
+                WITH candidate_scores AS (
+                    SELECT
+                        source_type,
+                        source_id,
+                        bool_or(decision = 'retain') AS retained
+                    FROM scores
+                    GROUP BY source_type, source_id
+                )
+                SELECT count(*)
+                FROM labels
+                JOIN candidate_scores USING (source_type, source_id)
+                WHERE retained
+                  AND false_positive_category = 'payment_brand_visa'
+                """
+            ).fetchone()[0]
+        )
+
+        promotion_bot_retained_false_positives = int(
+            con.execute(
+                """
+                WITH candidate_scores AS (
+                    SELECT
+                        source_type,
+                        source_id,
+                        bool_or(decision = 'retain') AS retained
+                    FROM scores
+                    GROUP BY source_type, source_id
+                )
+                SELECT count(*)
+                FROM labels
+                JOIN candidate_scores USING (source_type, source_id)
+                WHERE retained
+                  AND false_positive_category = 'promotion_or_bot'
+                """
+            ).fetchone()[0]
+        )
+
+        gate_passed = (
+            retained_count > 0
+            and candidate["exact_retained_precision"] >= args.minimum_retain_precision
+            and candidate["weighted_retained_recall_estimate"] >= args.minimum_weighted_recall
+            and not domain_precision_failures
+            and missing_source_url_count == 0
+            and visa_retained_false_positives == 0
+            and promotion_bot_retained_false_positives == 0
+            and not category_rate_violations
+        )
+
         return {
             "status": "completed",
             "relevance_version": relevance_version,
             "rows_labeled": rows_labeled,
             "domains": domains,
             "candidate": candidate,
+            "strata": strata,
             "trap_leakage": trap_leakage,
+            "missing_source_url_count": missing_source_url_count,
+            "visa_retained_false_positives": visa_retained_false_positives,
+            "promotion_bot_retained_false_positives": promotion_bot_retained_false_positives,
+            "false_positive_category_rate_violations": category_rate_violations,
+            "domain_precision_failures": domain_precision_failures,
             "minimum_retain_precision": args.minimum_retain_precision,
-            "quality_gate_passed": (
-                candidate["retained_predictions"] > 0
-                and candidate["retained_precision"] >= args.minimum_retain_precision
-            ),
+            "minimum_weighted_recall": args.minimum_weighted_recall,
+            "quality_gate_passed": gate_passed,
         }
     finally:
         con.close()
