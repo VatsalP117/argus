@@ -105,10 +105,10 @@ con.execute("""
 COPY (
     SELECT * FROM (
         VALUES
-            ('comment', 'travel-pain', false, false, '["travel_language","pain_language"]'::JSON, '["visa","frustrating"]'::JSON),
-            ('comment', 'prior-only', true, false, '[]'::JSON, '[]'::JSON),
-            ('comment', 'saas-request', false, false, '["product_and_tool_language","business_workflow_language","request_intent"]'::JSON, '["software","workflow","need an app"]'::JSON)
-    ) AS t(source_type, source_id, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
+            ('comment', 'travel-pain', 'travel', 'Visa processing is frustrating.', false, false, '["travel_language","pain_language"]'::JSON, '["visa","frustrating"]'::JSON),
+            ('comment', 'prior-only', 'travel', 'A cheerful trip story.', true, false, '[]'::JSON, '[]'::JSON),
+            ('comment', 'saas-request', 'business', 'I need an app for this workflow.', false, false, '["product_and_tool_language","business_workflow_language","request_intent"]'::JSON, '["software","workflow","need an app"]'::JSON)
+    ) AS t(source_type, source_id, subreddit, candidate_text, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
 )
 TO ? (FORMAT PARQUET)
 """, [sys.argv[1]])

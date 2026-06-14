@@ -38,7 +38,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&entryID, "entry-id", "", "single manifest entry to commit")
 	flags.StringVar(&scanCheckpointPath, "scan-checkpoint", "", "completed candidate scan checkpoint")
 	flags.StringVar(&scorePath, "score-path", "", "deterministic relevance score Parquet")
-	flags.StringVar(&relevanceConfigPath, "relevance-config", "configs/relevance/deterministic-v1.yaml", "path to relevance rules")
+	flags.StringVar(&relevanceConfigPath, "relevance-config", "configs/relevance/deterministic-v2.yaml", "path to relevance rules")
 	flags.StringVar(&authorHashSaltFile, "author-hash-salt-file", filepath.Join("state", "secrets", "author-hash-salt"), "ignored local author hash salt file")
 	flags.StringVar(&commitScript, "commit-script", "scripts/dev/duckdb_commit_candidates.py", "path to DuckDB commit adapter")
 	if err := flags.Parse(args); err != nil {

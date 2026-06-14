@@ -11,13 +11,27 @@ go run ./cmd/score-candidates \
   --scan-checkpoint state/checkpoints/candidate-scan/<manifest-id>/<entry-id>.json
 ```
 
-The scorer reads `configs/relevance/deterministic-v1.yaml` and emits one row per candidate and domain:
+The scorer reads `configs/relevance/deterministic-v2.yaml` by default and emits one row per candidate and domain:
 
 - `A` and `B`: retain
 - `C`: evaluation pool
 - `D`: discard after metrics
 
-Semantic and classifier scores remain null. All current decisions are deterministic and explainable.
+Semantic and classifier scores remain null. Context boosts, ambiguity penalties, required evidence groups, and all current decisions are deterministic and explainable.
+
+## Evaluate
+
+Use a metadata-bearing labelled fixture to compare a score output before committing it:
+
+```bash
+go run ./cmd/evaluate-relevance \
+  --labels evaluations/relevance/adjacent-comments-2021-01-001-v2-labels.csv \
+  --score-path data/tmp/candidates/adjacent-comments-2021-01-001-scores-v2.parquet
+```
+
+The command reports candidate and per-domain retained precision/recall. It returns exit status `3` when candidate retained precision is below `70%`.
+
+Label fixtures must include the population metadata columns (`sample_stratum`, `stratum_population`, `sample_rank`, `sampling_seed`) produced by `export-relevance-eval`. Older fixtures without these columns must be regenerated.
 
 ## Commit
 
@@ -59,4 +73,16 @@ It records one cleanup event per file, removes candidate and score Parquet, then
 
 ## Current Gate
 
-Do not scan another shard yet. `deterministic_v1` is a calibration model, not a production relevance model. Build and label the evaluation set before widening ingestion.
+`deterministic_v2` passed the expanded 339-row engineering fixture at `85.1%` retained precision and `80.0%` retained recall. One adjacent bounded shard may be scanned and reviewed next. Do not run a full month until the new-shard yield is reviewed and a small independent human spot-check confirms the agent-reviewed labels.
+
+## Adjacent-Shard Validation Result (2026-06-14)
+
+The adjacent shard `comments-2021-01-001` was scanned, scored with the unchanged `deterministic_v2` config, and labelled. The quality gates were **not** met:
+
+- exact retained precision: **54.9%** (gate ≥ 70%)
+- weighted retained recall estimate: **2.1%** (gate ≥ 60%)
+- per-domain precision failures: `travel` 56.0%, `app_opportunity` 45.8%
+- retained promotion/bot false positives: 2 (gate = 0)
+- `lexical_ambiguity` false-positive share: 21.6% (gate ≤ 20%)
+
+Because the gates failed, the isolated temporary DuckDB lifecycle proof was skipped and no data was committed to `data/argus.duckdb`. The scorer config was not edited after observing the shard. The recommended next step is a separate `v3` calibration cycle on a new training/validation split, followed by re-validation on a fresh adjacent shard before any full-month run.

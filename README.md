@@ -101,7 +101,22 @@ go run ./cmd/cleanup-staging \
   --ingest-batch-id <validated-ingest-batch-id>
 ```
 
-`commit-candidates` writes documents, domain relevance, signals, entities, and reconciliation in one transaction. `cleanup-staging` refuses unvalidated or checksum-mismatched batches and records a cleanup event for each deleted file.
+Scoring defaults to [configs/relevance/deterministic-v2.yaml](/Users/vatsalpatel/Desktop/Projects/argus/configs/relevance/deterministic-v2.yaml). `commit-candidates` writes documents, domain relevance, signals, entities, and reconciliation in one transaction. `cleanup-staging` refuses unvalidated or checksum-mismatched batches and records a cleanup event for each deleted file.
+
+Export and evaluate a fixed labelled relevance sample:
+
+```bash
+go run ./cmd/export-relevance-eval \
+  --scan-checkpoint state/checkpoints/candidate-scan/<manifest-id>/<entry-id>.json \
+  --score-path data/tmp/candidates/<entry-id>-candidates-scores.parquet \
+  --output-path evaluations/relevance/<fixture>.csv
+
+go run ./cmd/evaluate-relevance \
+  --labels evaluations/relevance/<fixture>.csv \
+  --score-path data/tmp/candidates/<entry-id>-candidates-scores.parquet
+```
+
+The evaluator exits with status `3` when the configured retained-precision gate fails.
 
 See [docs/runbooks/phase-8-durable-candidate-commit.md](/Users/vatsalpatel/Desktop/Projects/argus/docs/runbooks/phase-8-durable-candidate-commit.md).
 

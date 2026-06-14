@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -28,8 +29,17 @@ def term_match(term: str):
     return f"json_contains(matched_terms, {sql_string(json.dumps(term))})"
 
 
+def text_match(term: str):
+    normalized = term.lower()
+    if re.fullmatch(r"[a-z0-9]+", normalized):
+        pattern = rf"(^|[^a-z0-9]){re.escape(normalized)}([^a-z0-9]|$)"
+        return f"regexp_matches(candidate_match_text, {sql_string(pattern)})"
+    return f"contains(candidate_match_text, {sql_string(normalized)})"
+
+
 def build_domain_query(domain: dict):
     score_parts = []
+    penalty_parts = []
     reason_parts = []
     for group, weight in domain["group_weights"].items():
         matches = group_match(group)
@@ -37,20 +47,44 @@ def build_domain_query(domain: dict):
         reason_parts.append(
             f"CASE WHEN {matches} THEN {sql_string(group)} ELSE NULL::VARCHAR END"
         )
+    for term, weight in (domain.get("context_weights") or {}).items():
+        matches = text_match(term)
+        score_parts.append(f"CASE WHEN {matches} THEN {float(weight)} ELSE 0 END")
+        reason_parts.append(
+            f"CASE WHEN {matches} THEN {sql_string('context:' + term)} "
+            "ELSE NULL::VARCHAR END"
+        )
+    for term, weight in (domain.get("context_penalty_weights") or {}).items():
+        matches = text_match(term)
+        penalty_parts.append(f"CASE WHEN {matches} THEN {float(weight)} ELSE 0 END")
+        reason_parts.append(
+            f"CASE WHEN {matches} THEN {sql_string('penalty:' + term)} "
+            "ELSE NULL::VARCHAR END"
+        )
 
     prior_weight = float(domain.get("subreddit_prior_weight", 0))
     prior_score = (
         f"CASE WHEN subreddit_prior_match THEN {prior_weight} ELSE 0 END"
     )
     raw_score_expression = " + ".join(score_parts + [prior_score])
-    required_terms = domain.get("required_any_terms", [])
+    penalty_expression = " + ".join(penalty_parts) if penalty_parts else "0"
+    required_terms = domain.get("required_any_terms") or []
     if required_terms:
         requirement = " OR ".join(term_match(term) for term in required_terms)
     else:
         requirement = "true"
-    eligible = f"(NOT is_bot_like AND ({requirement}))"
+    required_groups = domain.get("required_any_groups") or []
+    if required_groups:
+        group_requirement = " OR ".join(group_match(group) for group in required_groups)
+    else:
+        group_requirement = "true"
+    eligible = (
+        f"(NOT is_bot_like AND ({requirement}) AND ({group_requirement}))"
+    )
     score_expression = (
-        f"CASE WHEN {eligible} THEN ({raw_score_expression}) ELSE 0 END"
+        f"CASE WHEN {eligible} "
+        f"THEN greatest(0, ({raw_score_expression}) - ({penalty_expression})) "
+        "ELSE 0 END"
     )
     reasons = ", ".join(
         reason_parts
@@ -111,7 +145,9 @@ def score(args, rules):
         con.execute(
             f"""
             CREATE TEMP VIEW candidate_source AS
-            SELECT *
+            SELECT
+                *,
+                lower(trim(coalesce(candidate_text, ''))) AS candidate_match_text
             FROM read_parquet({sql_string(str(input_path))})
             """
         )
