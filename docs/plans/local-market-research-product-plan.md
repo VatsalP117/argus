@@ -832,4 +832,16 @@ The labelled relevance fixture and `deterministic_v2` calibration were completed
 
 The next executor may run one adjacent bounded shard and publish its yield. Do not run a full month until the adjacent-shard review and a small independent human spot-check confirm that the agent-reviewed fixture is directionally sound.
 
+### Adjacent-shard v2 validation result (2026-06-14)
+
+A reproducible labelled fixture was created for `comments-2021-01-001` (251 rows, all 51 retained rows plus 100 evaluate and 100 discard samples). `deterministic_v2` failed the quality gates on this unseen shard:
+
+- exact retained precision: **54.9%** (gate ≥ 70%)
+- weighted retained recall estimate: **2.1%** (gate ≥ 60%)
+- per-domain precision below 60% for `travel` (56.0%) and `app_opportunity` (45.8%)
+- retained promotion/bot false positives: 2 (gate = 0)
+- `lexical_ambiguity` exceeded 20% of retained rows (21.6%)
+
+No data was committed to `data/argus.duckdb`. The scorer config was not tuned against the validation shard. The recommended next step is a separate v3 calibration using a new training/validation split and an independently spot-checked label set. Do not authorize a full-month run until a successor scorer passes all gates on an unseen shard.
+
 This sequence proves the storage lifecycle before spending time on the web product or a large ingest.

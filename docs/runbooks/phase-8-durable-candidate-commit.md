@@ -72,3 +72,15 @@ It records one cleanup event per file, removes candidate and score Parquet, then
 ## Current Gate
 
 `deterministic_v2` passed the expanded 339-row engineering fixture at `85.1%` retained precision and `80.0%` retained recall. One adjacent bounded shard may be scanned and reviewed next. Do not run a full month until the new-shard yield is reviewed and a small independent human spot-check confirms the agent-reviewed labels.
+
+## Adjacent-Shard Validation Result (2026-06-14)
+
+The adjacent shard `comments-2021-01-001` was scanned, scored with the unchanged `deterministic_v2` config, and labelled. The quality gates were **not** met:
+
+- exact retained precision: **54.9%** (gate ≥ 70%)
+- weighted retained recall estimate: **2.1%** (gate ≥ 60%)
+- per-domain precision failures: `travel` 56.0%, `app_opportunity` 45.8%
+- retained promotion/bot false positives: 2 (gate = 0)
+- `lexical_ambiguity` false-positive share: 21.6% (gate ≤ 20%)
+
+Because the gates failed, the isolated temporary DuckDB lifecycle proof was skipped and no data was committed to `data/argus.duckdb`. The scorer config was not edited after observing the shard. The recommended next step is a separate `v3` calibration cycle on a new training/validation split, followed by re-validation on a fresh adjacent shard before any full-month run.
