@@ -56,7 +56,7 @@ func TestExportEvaluationCreatesDeterministicStratifiedLabelFixture(t *testing.T
 	}
 	for _, column := range []string{
 		"source_id",
-		"original_text",
+		"text_excerpt",
 		"source_url",
 		"sample_stratum",
 		"label_travel",
@@ -70,7 +70,7 @@ func TestExportEvaluationCreatesDeterministicStratifiedLabelFixture(t *testing.T
 		}
 	}
 	for _, record := range records[1:] {
-		if record[header["source_url"]] == "" || record[header["original_text"]] == "" {
+		if record[header["source_url"]] == "" || record[header["text_excerpt"]] == "" {
 			t.Fatalf("expected evidence text and backlink: %v", record)
 		}
 		for _, label := range []string{

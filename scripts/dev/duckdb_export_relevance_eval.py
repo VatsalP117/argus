@@ -96,7 +96,7 @@ def export_evaluation(args):
                     c.source_type,
                     c.source_id,
                     c.subreddit,
-                    c.original_text,
+                    left(c.original_text, 1000) AS text_excerpt,
                     c.source_url,
                     c.matched_terms,
                     c.matched_rule_groups,
