@@ -211,6 +211,152 @@ func TestEvaluateRejectsIncompleteRetainStratum(t *testing.T) {
 	}
 }
 
+func TestEvaluateRejectsForgedPopulationMatchingIncompleteCSV(t *testing.T) {
+	dir := t.TempDir()
+	candidatePath := filepath.Join(dir, "candidates.parquet")
+	scorePath := filepath.Join(dir, "scores.parquet")
+	createEvaluationFixture(t, candidatePath, scorePath)
+
+	// Delete one retained label and forge the remaining retain row's population to match.
+	labelsPath := filepath.Join(dir, "labels.csv")
+	file, err := os.Create(labelsPath)
+	if err != nil {
+		t.Fatalf("create labels: %v", err)
+	}
+	writer := csv.NewWriter(file)
+	if err := writer.Write([]string{
+		"source_type",
+		"source_id",
+		"sample_stratum",
+		"stratum_population",
+		"sample_rank",
+		"sampling_seed",
+		"label_travel",
+		"label_saas_opportunity",
+		"label_app_opportunity",
+		"false_positive_category",
+		"label_notes",
+		"source_url",
+	}); err != nil {
+		t.Fatalf("write label header: %v", err)
+	}
+	for _, row := range [][]string{
+		{"comment", "retain-a", "retain", "1", "1", "fixture", "1", "0", "0", "", "", "https://reddit.test/retain-a"},
+		{"comment", "retain-b", "retain", "1", "1", "fixture", "0", "0", "0", "", "", "https://reddit.test/retain-b"},
+		{"comment", "evaluate-a", "evaluate", "2", "1", "fixture", "1", "0", "0", "", "", "https://reddit.test/evaluate-a"},
+		{"comment", "evaluate-b", "evaluate", "2", "2", "fixture", "0", "1", "1", "", "", "https://reddit.test/evaluate-b"},
+		{"comment", "discard-a", "discard", "2", "1", "fixture", "0", "0", "0", "", "", "https://reddit.test/discard-a"},
+		{"comment", "discard-b", "discard", "2", "2", "fixture", "0", "0", "0", "", "", "https://reddit.test/discard-b"},
+	} {
+		if err := writer.Write(row); err != nil {
+			t.Fatalf("write label row: %v", err)
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		t.Fatalf("flush labels: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close labels: %v", err)
+	}
+
+	_, err = Evaluate(context.Background(), EvaluationOptions{
+		LabelsPath:             labelsPath,
+		ScorePath:              scorePath,
+		ScriptPath:             filepath.Join("..", "..", "scripts", "dev", "duckdb_evaluate_relevance.py"),
+		MinimumRetainPrecision: 0.70,
+	})
+	if err == nil {
+		t.Fatalf("expected error for forged population matching incomplete CSV")
+	}
+}
+
+func TestEvaluateRejectsUnlabeledRetainedScores(t *testing.T) {
+	dir := t.TempDir()
+	candidatePath := filepath.Join(dir, "candidates.parquet")
+	scorePath := filepath.Join(dir, "scores.parquet")
+	createEvaluationFixture(t, candidatePath, scorePath)
+
+	// Omit one retained row from the labels; the score file still retains it.
+	labelsPath := writeLabels(t, dir, []labelRow{
+		{"retain-a", "1", "0", "0", "", "", "https://reddit.test/retain-a"},
+		{"evaluate-a", "1", "0", "0", "", "", "https://reddit.test/evaluate-a"},
+		{"evaluate-b", "0", "1", "1", "", "", "https://reddit.test/evaluate-b"},
+		{"discard-a", "0", "0", "0", "", "", "https://reddit.test/discard-a"},
+		{"discard-b", "0", "0", "0", "", "", "https://reddit.test/discard-b"},
+	})
+
+	_, err := Evaluate(context.Background(), EvaluationOptions{
+		LabelsPath:             labelsPath,
+		ScorePath:              scorePath,
+		ScriptPath:             filepath.Join("..", "..", "scripts", "dev", "duckdb_evaluate_relevance.py"),
+		MinimumRetainPrecision: 0.70,
+	})
+	if err == nil {
+		t.Fatalf("expected error when score-derived retained candidates are missing from labels")
+	}
+}
+
+func TestEvaluateRejectsMismatchedStratum(t *testing.T) {
+	dir := t.TempDir()
+	candidatePath := filepath.Join(dir, "candidates.parquet")
+	scorePath := filepath.Join(dir, "scores.parquet")
+	createEvaluationFixture(t, candidatePath, scorePath)
+
+	// Label a retained candidate as evaluate, which contradicts the score-derived stratum.
+	labelsPath := filepath.Join(dir, "labels.csv")
+	file, err := os.Create(labelsPath)
+	if err != nil {
+		t.Fatalf("create labels: %v", err)
+	}
+	writer := csv.NewWriter(file)
+	if err := writer.Write([]string{
+		"source_type",
+		"source_id",
+		"sample_stratum",
+		"stratum_population",
+		"sample_rank",
+		"sampling_seed",
+		"label_travel",
+		"label_saas_opportunity",
+		"label_app_opportunity",
+		"false_positive_category",
+		"label_notes",
+		"source_url",
+	}); err != nil {
+		t.Fatalf("write label header: %v", err)
+	}
+	for _, row := range [][]string{
+		{"comment", "retain-a", "evaluate", "2", "1", "fixture", "1", "0", "0", "", "", "https://reddit.test/retain-a"},
+		{"comment", "retain-b", "retain", "2", "2", "fixture", "0", "0", "0", "", "", "https://reddit.test/retain-b"},
+		{"comment", "evaluate-a", "evaluate", "2", "1", "fixture", "1", "0", "0", "", "", "https://reddit.test/evaluate-a"},
+		{"comment", "evaluate-b", "evaluate", "2", "2", "fixture", "0", "1", "1", "", "", "https://reddit.test/evaluate-b"},
+		{"comment", "discard-a", "discard", "2", "1", "fixture", "0", "0", "0", "", "", "https://reddit.test/discard-a"},
+		{"comment", "discard-b", "discard", "2", "2", "fixture", "0", "0", "0", "", "", "https://reddit.test/discard-b"},
+	} {
+		if err := writer.Write(row); err != nil {
+			t.Fatalf("write label row: %v", err)
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		t.Fatalf("flush labels: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close labels: %v", err)
+	}
+
+	_, err = Evaluate(context.Background(), EvaluationOptions{
+		LabelsPath:             labelsPath,
+		ScorePath:              scorePath,
+		ScriptPath:             filepath.Join("..", "..", "scripts", "dev", "duckdb_evaluate_relevance.py"),
+		MinimumRetainPrecision: 0.70,
+	})
+	if err == nil {
+		t.Fatalf("expected error for mismatched sample_stratum")
+	}
+}
+
 type labelRow struct {
 	SourceID              string
 	Travel                string

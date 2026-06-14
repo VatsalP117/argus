@@ -121,6 +121,165 @@ def evaluate(args):
             if invalid:
                 raise ValueError(f"label column {column} has {invalid} invalid values")
 
+        # Derive each candidate's stratum and all stratum populations from scores.
+        con.execute(
+            """
+            CREATE TEMP VIEW derived_strata AS
+            WITH ranked_domains AS (
+                SELECT
+                    *,
+                    row_number() OVER (
+                        PARTITION BY source_type, source_id
+                        ORDER BY relevance_score DESC, domain
+                    ) AS domain_rank
+                FROM scores
+            ),
+            score_summary AS (
+                SELECT
+                    source_type,
+                    source_id,
+                    CASE max(CASE decision
+                        WHEN 'retain' THEN 2
+                        WHEN 'evaluate' THEN 1
+                        ELSE 0
+                    END)
+                        WHEN 2 THEN 'retain'
+                        WHEN 1 THEN 'evaluate'
+                        ELSE 'discard'
+                    END AS sample_stratum
+                FROM ranked_domains
+                GROUP BY source_type, source_id
+            )
+            SELECT * FROM score_summary
+            """
+        )
+        con.execute(
+            """
+            CREATE TEMP VIEW derived_populations AS
+            SELECT sample_stratum, count(*) AS population
+            FROM derived_strata
+            GROUP BY sample_stratum
+            """
+        )
+
+        # Every label must correspond to a scored candidate.
+        unknown_label_ids = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM labels l
+                LEFT JOIN derived_strata d USING (source_type, source_id)
+                WHERE d.source_id IS NULL
+                """
+            ).fetchone()[0]
+        )
+        if unknown_label_ids:
+            raise ValueError("label fixture contains source IDs not present in score input")
+
+        # Every label's claimed stratum must match the stratum derived from scores.
+        stratum_mismatch = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM labels l
+                JOIN derived_strata d USING (source_type, source_id)
+                WHERE l.sample_stratum <> d.sample_stratum
+                """
+            ).fetchone()[0]
+        )
+        if stratum_mismatch:
+            raise ValueError(f"{stratum_mismatch} label rows have a sample_stratum that does not match the score-derived stratum")
+
+        # Every non-empty stratum in the fixture must be present in the score-derived populations
+        # and its claimed population must match the derived population.
+        population_mismatch = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM (
+                    SELECT
+                        l.sample_stratum,
+                        max(l.stratum_population) AS label_population,
+                        d.population AS derived_population
+                    FROM labels l
+                    JOIN derived_populations d ON l.sample_stratum = d.sample_stratum
+                    GROUP BY l.sample_stratum, d.population
+                )
+                WHERE label_population <> derived_population
+                """
+            ).fetchone()[0]
+        )
+        if population_mismatch:
+            raise ValueError("stratum_population values do not match score-derived populations")
+
+        # Require every stratum that has a non-zero derived population to be represented in labels.
+        missing_strata = [
+            stratum
+            for stratum, in con.execute(
+                """
+                SELECT d.sample_stratum
+                FROM derived_populations d
+                LEFT JOIN (
+                    SELECT DISTINCT sample_stratum FROM labels
+                ) l ON d.sample_stratum = l.sample_stratum
+                WHERE d.population > 0 AND l.sample_stratum IS NULL
+                ORDER BY d.sample_stratum
+                """
+            ).fetchall()
+        ]
+        if missing_strata:
+            raise ValueError(f"label fixture is missing strata with non-zero populations: {missing_strata}")
+
+        # The retained label IDs must exactly match the score-derived retained IDs.
+        score_retained_count = int(
+            con.execute(
+                """
+                SELECT count(*) FROM derived_strata WHERE sample_stratum = 'retain'
+                """
+            ).fetchone()[0]
+        )
+        label_retained_count = int(
+            con.execute(
+                """
+                SELECT count(*) FROM labels WHERE sample_stratum = 'retain'
+                """
+            ).fetchone()[0]
+        )
+        if score_retained_count != label_retained_count:
+            raise ValueError(
+                f"retained label count ({label_retained_count}) does not match score-derived retained count ({score_retained_count})"
+            )
+
+        unlabeled_retained_scores = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM derived_strata d
+                LEFT JOIN labels l USING (source_type, source_id)
+                WHERE d.sample_stratum = 'retain' AND l.source_id IS NULL
+                """
+            ).fetchone()[0]
+        )
+        if unlabeled_retained_scores:
+            raise ValueError(
+                f"{unlabeled_retained_scores} score-derived retained candidates are missing from the label fixture"
+            )
+
+        extra_retained_labels = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM labels l
+                LEFT JOIN derived_strata d USING (source_type, source_id)
+                WHERE l.sample_stratum = 'retain' AND d.source_id IS NULL
+                """
+            ).fetchone()[0]
+        )
+        if extra_retained_labels:
+            raise ValueError(
+                f"{extra_retained_labels} retained labels are not score-derived retained candidates"
+            )
+
         joined_score_rows = int(
             con.execute(
                 """
@@ -134,38 +293,6 @@ def evaluate(args):
         if joined_score_rows != rows_labeled * len(DOMAINS):
             raise ValueError(
                 "score input does not contain exactly one row per labelled candidate and domain"
-            )
-
-        inconsistent_population = int(
-            con.execute(
-                """
-                SELECT count(*)
-                FROM (
-                    SELECT sample_stratum, count(DISTINCT stratum_population) AS distinct_populations
-                    FROM labels
-                    GROUP BY sample_stratum
-                )
-                WHERE distinct_populations > 1
-                """
-            ).fetchone()[0]
-        )
-        if inconsistent_population:
-            raise ValueError("stratum_population is inconsistent within a stratum")
-
-        retain_population, retain_sample_size = con.execute(
-            """
-            SELECT
-                max(stratum_population),
-                count(*)
-            FROM labels
-            WHERE sample_stratum = 'retain'
-            """
-        ).fetchone()
-        retain_population = int(retain_population or 0)
-        retain_sample_size = int(retain_sample_size or 0)
-        if retain_sample_size != retain_population:
-            raise ValueError(
-                f"retain fixture must include all retained rows: sample={retain_sample_size}, population={retain_population}"
             )
 
         score_columns = {
@@ -232,17 +359,18 @@ def evaluate(args):
         stratum_stats = con.execute(
             """
             SELECT
-                sample_stratum,
-                max(stratum_population) AS population,
-                count(*) AS sample_size,
-                count(*) FILTER (
-                    WHERE label_travel = '1'
-                       OR label_saas_opportunity = '1'
-                       OR label_app_opportunity = '1'
+                d.sample_stratum,
+                d.population,
+                count(l.source_id) AS sample_size,
+                count(l.source_id) FILTER (
+                    WHERE l.label_travel = '1'
+                       OR l.label_saas_opportunity = '1'
+                       OR l.label_app_opportunity = '1'
                 ) AS positive_count
-            FROM labels
-            GROUP BY sample_stratum
-            ORDER BY sample_stratum
+            FROM derived_populations d
+            LEFT JOIN labels l ON d.sample_stratum = l.sample_stratum
+            GROUP BY d.sample_stratum, d.population
+            ORDER BY d.sample_stratum
             """
         ).fetchall()
         strata = {}

@@ -37,7 +37,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.StringVar(&exporterScript, "exporter-script", "scripts/dev/duckdb_export_relevance_eval.py", "DuckDB evaluation exporter")
 	flags.StringVar(&seed, "seed", "relevance-eval-v1", "stable sampling seed")
 	flags.IntVar(&samplePerStratum, "sample-per-stratum", 100, "rows sampled from each decision stratum")
-	flags.IntVar(&retainSample, "retain-sample", -1, "retained rows to export; 0 means all, -1 uses sample-per-stratum")
+	flags.IntVar(&retainSample, "retain-sample", 0, "retained rows to export; 0 means all, -1 uses sample-per-stratum")
 	flags.IntVar(&evaluateSample, "evaluate-sample", -1, "evaluate rows to export; 0 means all, -1 uses sample-per-stratum")
 	flags.IntVar(&discardSample, "discard-sample", -1, "discard rows to export; 0 means all, -1 uses sample-per-stratum")
 	flags.BoolVar(&force, "force", false, "replace an existing label fixture")

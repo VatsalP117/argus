@@ -21,15 +21,17 @@ Semantic and classifier scores remain null. Context boosts, ambiguity penalties,
 
 ## Evaluate
 
-Use the checked-in labelled fixture to compare a score output before committing it:
+Use a metadata-bearing labelled fixture to compare a score output before committing it:
 
 ```bash
 go run ./cmd/evaluate-relevance \
-  --labels evaluations/relevance/broad-shard-2021-01-000-v1-labels.csv \
-  --score-path <score-parquet>
+  --labels evaluations/relevance/adjacent-comments-2021-01-001-v2-labels.csv \
+  --score-path data/tmp/candidates/adjacent-comments-2021-01-001-scores-v2.parquet
 ```
 
 The command reports candidate and per-domain retained precision/recall. It returns exit status `3` when candidate retained precision is below `70%`.
+
+Label fixtures must include the population metadata columns (`sample_stratum`, `stratum_population`, `sample_rank`, `sampling_seed`) produced by `export-relevance-eval`. Older fixtures without these columns must be regenerated.
 
 ## Commit
 
