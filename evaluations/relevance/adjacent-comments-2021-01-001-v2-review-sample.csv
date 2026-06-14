@@ -1,0 +1,167 @@
+source_id,subreddit,text_excerpt,source_url,v1_travel_score,v1_saas_opportunity_score,v1_app_opportunity_score,predicted_domain,predicted_score,predicted_tier,predicted_decision,label_travel,label_saas_opportunity,label_app_opportunity,false_positive_category,label_notes
+gho85ro,expats,"Chose a country.
+
+It was fairly easy, as we’d talked about living in London for many years before we decided to move, and we both had residency and work rights in the UK.
+
+Once chosen, we got cracking on the passport / visa to make the move feasible. And I started making my work location independent to make the transition smoother.",https://www.reddit.com/comments/ko4btq/_/gho85ro,0.8,0.0,0.0,travel,0.8,A,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho1ljv,oculus,"Same issue except I’m just trying to get in installed as I owned it before with the Rift and want to use it with my quest 2 with the link cable.
+
+Unfortunately I can’t get a refund since it’s been years since I bought. Hopefully someone can figure this out. Seems like a pretty damn big bug. I can’t install several apps. So yeah, be careful and download any purchases right away just in case.
+
+Terrible app Oculus.",https://www.reddit.com/comments/kjr5fs/_/gho1ljv,0.0,0.25,0.6,app_opportunity,0.6,B,retain,0,0,1,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho63ut,technews,"I really wish there was a way to indicate that a call is coming from a hospital or clinic, and build some kind of anti spoof into that.
+
+My patients have missed out on several referrals and had urgent issues go un-addressed because they won't answer unknown numbers.
+
+Hopefully this change will help, though I hope I'm still able to spoof my number when I call patients (I have an app that makes calls from my cellphone look like they're coming from the hospital or clinic so they don't get my #)",https://www.reddit.com/comments/kntxi5/_/gho63ut,0.0,0.15,0.7,app_opportunity,0.7,B,retain,0,1,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+ghnyhs9,onguardforthee,"This is true and not true. When a Canadian Citizen or PR reaches a port of entry on Canadian soil (an airport of a land port), then you are correct. They cannot be refused entry for any reason.
+
+However, the testing requirement rule is not administered by the CBSA nor is it an issue of customs/border agents. This is a **Transport Canada** rule that dictates that you can't board a plane to Canada without a COVID-19 test. Because the Canadian is not on our soil (and neither is the plane at the time), its not denying them mobility rights by technicality.
+
+So, if the Canadian managed to get on the plane without a test and reached a Canadian airport, then they're in! Otherwise, they need a test to get on the plane.",https://www.reddit.com/comments/kn7lx4/_/ghnyhs9,0.6,0.0,0.0,travel,0.6,B,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho1b44,Glocks,"So, question for you then.
+I have a carry permit in some state in which it does not have reciprocity in some other state. I plan on visiting family in some other state at some point in the future — now, because I don’t have a carry permit in some other state and provided that TSA doesn’t trip shit that day AND I am not legally prohibited from possessing a firearm (at least at the federal level I guess), would I be alright to travel with my stuff — properly packed and secured, of course? I’d imagine I can’t *carry* my handgun in some other state, but can have it in a vehicle. But also probably not lmao.
+Better predicament — if.. say I were traveling for a long distance shootout competition of some sort, and I’m traveling with my rifle... again, properly packed and secured per both the airline and TSA regulation. The rifle is compliant in both states. Would I get shit in some other state for having my rifle? Or handgun? Or would it just be that I can’t concealed carry or.. whatever?",https://www.reddit.com/comments/knu0ok/_/gho1b44,0.85,0.0,0.0,travel,0.85,A,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho0tj2,Hololive,"She mentioned in one of her superchat streams that she came to Japan to 'participate in the Olympics' and hopefully find something to do with her life in Japan. Then COVID hit and she was stuck in Japan with no work until she found the hole and eventually joined it. But I think there's some Japanese laws about whether a company needs requirements to give a foreigner a work visa and Cover might not qualify so Kiara's visa will soon expire and she needs to move back to ""Australia"".
+
+That's what I understand of the situation but I'm probably hazy on the details. Hopefully someone can correct me of any misinformation.",https://www.reddit.com/comments/knp76g/_/gho0tj2,0.7,0.0,0.0,travel,0.7,B,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho0dil,googlehome,"1. The switches are in the same physical room. Putting them in separate rooms in the app does not make any sense.
+
+2. The second switch does not work at all now. I've air gapped it and disconnected it completely multiple times. All it does it flash red and flash the lights. It won't even factory reset when I hold down the button for 10 seconds. I think it's just busted.
+
+3. I've singed out and back in. The ring light still stays on. https://imgur.com/a/JJYdJbh",https://www.reddit.com/comments/km1nmm/_/gho0dil,0.0,0.25,0.65,app_opportunity,0.65,B,retain,0,0,1,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho1ap6,cozumel,"You are correct, you must take the airport shuttle service or rent a car to leave the airport, unless you have a friend pick you up OR the hotel has that service. Upon exiting the customs area, turn right, bypass all the salespeople in their blue shirts, and get shuttle tickets from the desk near the external exit. As for your tour plans: so many of us hire the legendary Mario Niño for a day tour around the coast. You can go on a tequila tour, stop at Welcome to Miami for a limey beverage, and get your reggae on with fish tacos at the south end. If you do this early in the trip you'll have plenty of ideas for the rest of the days.",https://www.reddit.com/comments/ko15wb/_/gho1ap6,0.7,0.0,0.0,travel,0.7,B,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho35dt,solotravel,"Guest on Guest theft is somewhat common in hostels.  Sometimes people pretending to be guests at the hostel and then walking out with computers.  Apparently some Czech guy was doing that throughout Philippines for years and nobody suspected him because ""he looked white"".
+
+
+Hostels are pretty much the place where you have a ""daybag"" that contains your money and electronics and you go out with that.  If nightlife / clubbing then you lock stuff up in the hostel locker.",https://www.reddit.com/comments/kmk98g/_/gho35dt,0.65,0.0,0.0,travel,0.65,B,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho3g71,aviation,"I’m shocked that is even possible to have less leg rom than LATAM flights. They are absolutely the worst, I had one trip and decided that I’m willing to pay double the price if necessary to fly with any other airline but LATAM.",https://www.reddit.com/comments/knxwid/_/gho3g71,0.7,0.0,0.0,travel,0.7,B,retain,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho3gro,Flexicas,"happy new year guys, i just wanted to share this if you’re wondering who to use on your haul. an order in october took 2 months to clear customs but this week only 4 days. fastest shipping time i have ever had on any rep, go GD-EMS at least for now. i have a haul i used DHL which hasn’t moved on and right now GD-EMS clearly killin it",https://www.reddit.com/comments/ko3dtp/_/gho3gro,0.65,0.0,0.0,travel,0.65,B,retain,0,0,0,lexical_ambiguity,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho4sps,politics,That's true - I'm just saying that I don't think Biden will revert to our usual immigration processes while covid is still going on.,https://www.reddit.com/comments/ko3970/_/gho4sps,0.7,0.0,0.0,travel,0.7,B,retain,0,0,0,political_immigration,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho0u0w,ActualFreakouts,"Heh- just had my iPhone stolen myself.
+
+Ordered a new iPhone 12 Pro Max from Best Buy. Supposed to have it delivered but it never showed. I look at the itinerary of the supposed delivery and the deliverer said they tried at 2:00 pm.
+
+I have a video doorbell. They definitely didn’t show up. Oh and I have a Aussie Shep who will bark when someone is at the door. Def no video or bark!
+
+I go to Best Buy and ask what’s up? They don’t know either. The phone was never returned to the store.
+
+I then spend a week getting in touch with AT&amp;T to recover my upgrade eligibility and the already made payment on a phone I didn’t have!
+
+... come to find out Best Buy is a bunch of ding dongs. When they send out deliveries same day, they don’t do it like adult stores with black bags covering the merchandise. They send out products raw dog. So I’m pretty sure the person who’s delivering my phone say an iPhone 12 Pro Max 512 gigs and said YOLO.
+
+Lesson for Best Buy- go with the adult store black bag del",https://www.reddit.com/comments/knz4gs/_/gho0u0w,0.65,0.0,0.0,travel,0.65,B,retain,0,0,0,lexical_ambiguity,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+ghny7nd,funny,"This is designed to get someone on a H1B visa.  They must first look for someone in the US and if they can’t find anyone, then they can try the H1B route. They make the requirements impossible to meet and then get a foreigner at a reduced price.",https://www.reddit.com/comments/ko0rah/_/ghny7nd,0.75,0.0,0.0,travel,0.75,B,retain,0,0,0,political_immigration,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho1mq1,errantry,"DD had some health issues a few years ago that slowed writing down, and also she's focused on one of her other series. Her last update blog (linked in this sub I believe) discussed her current writing itinerary.",https://www.reddit.com/comments/kmya93/_/gho1mq1,0.6,0.0,0.0,travel,0.6,B,retain,0,0,0,lexical_ambiguity,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho7voh,nbn,"Like jezwel I'm with Aussie BB as well, and everything is great. They have a great app for managing your account, you can change plans/ speed tiers on a month to month basis. Best of all you can get a referral code from a friend and save on your first month while your friend will also get a cheap month.
+
+You can also use a code from a stranger on the internet :P
+
+But really, even when you ring them they're great, the call center in IN AUSTRALIA, instead of hold music they have Dad Jokes, but they answer so quickly I've only ever heard 1 in the half a dozen times I've called them. I even switched my Gran over to them and the only complaint she had was that her phone doesn't work any more... which I explained to her before hand and she said ok to :'D (You can get phone with them, it just has to be one of the voip phones)",https://www.reddit.com/comments/knntn4/_/gho7voh,0.0,0.25,0.65,app_opportunity,0.65,B,retain,0,0,0,promotion_or_bot,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+ghnyv42,flying,"Get a four year degree with career value from a legitimate university. Avoid Embry Riddle ""University"", Liberty Bible College, etc, at all costs. They're massively overpriced and the fake degrees they sell are barely enough to get you an assistant manager job at your local burger place if aviation doesn't work out. If you get a degree in engineering/software/business/etc you'll have a solid backup plan if you need it and maybe you'll even decide that, like some of us, you'd rather have a career in something else and fly for fun on the side.
+
+This also makes the decision of when to fly nice and simple. The university will not be involved in your flying at all so you can (and should) do your flight training whenever is convenient. If you have time and money before college there's no reason to delay.",https://www.reddit.com/comments/ko1orn/_/ghnyv42,0.0,0.35,0.8,app_opportunity,0.8,A,retain,0,0,0,lexical_ambiguity,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho3kah,UTSC,"SCSU automatically charges you Health insurance and Dental insurance (its on your Invoice, check Acorn) you can opt out but you need to follow their procedure or failing that email/contact them before the semester is over so that they can manually apply for a refund.
+
+You can only get a refund if you have alternate insurance (eg. your parents' employment related insurance policies) that covers the same thing (at least a bit).
+
+Edit: I just realized that your a highschool applicant: Psychology is a liberal arts degree (wiki search 'liberal arts education'. Its basically not vocational, professional or technical and its not meant to be.
+
+By that I mean its not a nursing or Computer Science program where you graduate and get a job ""in the field"". No, what happens is that you get a job administrating a set of tasks in an office with computers/meetings.
+
+I don't know exactly what this 'office work' entails but you get the gist. Every student I deemed successful that I look up to and want",https://www.reddit.com/comments/kl5qq6/_/gho3kah,0.0,0.6,0.0,saas_opportunity,0.6,B,retain,0,0,0,generic_product_mention,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho85o4,malaysia,"but eh i thought someone just a week ago said this is all a 'negotiation tactic' ? macam pandai sangat
+
+rm200-300 is the current average price (before covid) for flight tickets between kl sg, the world's busiest airline route. hsr will shave the hassle of airport security and transferring from klia to town. how is that inappropriate. penny wise pound foolish
+
+now we will pay rm300m compensation for literally NOTHING. unless we want to renegade a legal agreement and become diplomatic pariah joke.",https://www.reddit.com/comments/ko2buc/_/gho85o4,0.7,0.0,0.0,travel,0.7,B,retain,0,0,0,lexical_ambiguity,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho2u66,lexington,"When I was a kid, my dad worked at the airport and his airline had a company picnic/softball game there. Mid-late 80’s I’d wager.",https://www.reddit.com/comments/kn4xex/_/gho2u66,0.6,0.0,0.0,travel,0.6,B,retain,0,0,0,lexical_ambiguity,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho2vca,IllegalLifeProTips,I have the same name as my father. I've had airline tickets canceled because they thought he bought 2.,https://www.reddit.com/comments/kny6po/_/gho2vca,0.45,0.0,0.0,travel,0.45,C,evaluate,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho3uev,ADHD,"I don't mind at all! This sub has been so helpful!  had been suspecting adhd for almost 2 years by the time I got diagnosed. I searched for psychologists in my area and decided to look for the words adhd + my city, and luckily I found some articles written by a clinical psychologist in here. I made an appointment and the doctor called me and I explained my suspicions and said I wanted to be assessed for adhd. By then I already had a long list of concerns/symptoms that I noticed some people with adhd also had. We had the appointment, she asked me about my childhood and about my current concerns/symptoms. She then gave me a bunch of tests to take home (2 were for adhd, another long one was about different disorders and included symptoms for anxiety, depression and such) and 2 tests to give to a family member (I chose my mom).
+
+ I then mailed her all the tests and by the next appointment she had already checked them and confirmed that I had adhd, and that it seems I mostly struggle with a",https://www.reddit.com/comments/knqto3/_/gho3uev,0.0,0.4,0.0,saas_opportunity,0.4,C,evaluate,0,1,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+ghnxq2s,AndroidMasterRace,"For example. I never experience that sort kind of thing.
+If you don't use cleaner, then good luck deleting couple gigabytes of cache every app manually. If you use your phone often, for streaming youtube in HD, netflix etc, you're going to fill up your storage rather quickly.
+You can try using sd maid, and choose what to delete and what not in the quick access menu.",https://www.reddit.com/comments/knjf6g/_/ghnxq2s,0.0,0.4,0.5,app_opportunity,0.5,C,evaluate,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+ghnzyj9,Israel,"It wont give them a green passport, which frees youfrom restrictions.",https://www.reddit.com/comments/knrix7/_/ghnzyj9,0.55,0.0,0.0,travel,0.55,C,evaluate,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho6qdn,tulsa,"Hello, adult Tulsa woman with ADHD here.
+
+My experience with getting treated was that I had to get a referral from my primary care doctor to a psychiatrist. (Note: it probably needs to be a primary care dr that you already have an established relationship with-- if you find a random dr that you've never seen &amp; show up for your 1st appointment asking for ADHD meds, they are going to think you're a druggie.)
+
+When you finally get to the psychiatrist, hopefully they take you seriously. As we know, that doesn't always happen for women and I imagine it's an even bigger problem for POC and immigrants.
+
+Be open and receptive to whatever treatment they mention, again you don't want to give the impression that you're only seeking certain drugs. They may want you to consider antidepressants, cognitive behavioral therapy, or other therapies. You will have to answer some screening questions. They will prescribe medication as they deem necessary. Since most ADHD meds are controlled substances",https://www.reddit.com/comments/kmbdis/_/gho6qdn,0.0,0.4,0.0,saas_opportunity,0.4,C,evaluate,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho3jhr,KingstonOntario,"There is an urgent care at Hotel Dieu that you can go to during the day if it's not immediately life threatening. If it's immediately life threatening or after 8pm, ER.
+
+
+[https://kingstonhsc.ca/emergency-care](https://kingstonhsc.ca/emergency-care)",https://www.reddit.com/comments/ko3dku/_/gho3jhr,0.0,0.0,0.0,app_opportunity,0.0,D,discard,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho1v9t,singapore,Genting Hotel probably affected since it was so close to HSR area,https://www.reddit.com/comments/ko28q5/_/gho1v9t,0.0,0.0,0.0,app_opportunity,0.0,D,discard,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho3u0a,Watchexchange,"Mido Ocean Star Tribute - FULL KIT
+
+https://wornandwound.com/introducing-the-mido-ocean-star-tribute-special-edition/
+
+Condition - Excellent condition with only a couple lite scratches on tge polished bracelet/clasp. No scratches on the domed sapphire crystal or bezel. Purchased approx 1 month ago...original receipt included with purchase
+
+Includes - Original box, instructions manual, tag, all links, oem blue strap (never worn), Mido spring bar tool... everything
+
+Images - http://imgur.com/a/s1fzbgi
+
+Timestamp - http://imgur.com/a/RcGGWmD
+
+**$825 with free shipping in the CONUS.  Payment via PayPal friends and family.**
+
+
+
+Dial: Blue
+
+Dimensions: 40.5mm
+
+Crystal: Sapphire
+
+Water Resistance: 200 meters
+
+Crown: Screw down
+
+Movement: Caliber 80 (ETA C07.621, which is a base ETA 2836-2 with an 80-hour power reserve)
+
+Strap/bracelet: Stainless steel bracelet, technical fabric, fabric-look leather
+
+Price: $1,150
+
+Reference Number: M026.830.11.051.00",https://www.reddit.com/comments/ko3krx/_/gho3u0a,0.0,0.0,0.0,app_opportunity,0.0,D,discard,0,1,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho6tl3,astrophotography,"This is the Rosette Nebula in HOO.  I'm fairly happy with the way this turned out, the seeing and wind took it's toll and the moon was 98% illuminated that night which I believe is the cause of the slightly irregular gradient.  This appears almost salmon colored on my main monitor but more red on some others, hopefully not too saturated for most.
+
+Equipment:
+
+* Scope: Astrotech AT60ED
+* Mount: HEQ5
+* Camera: Canon 600D, LPF2 removed, Cold finger peltier mod.
+* Guiding: QHY5L-II-M with QHY mini guide scope
+* L-Extreme Filter 2""
+
+Software:
+
+  * N.I.N.A
+  * PHD2
+  * PixInsight
+
+Acquisition:
+
+  * 61 x 180"" Lights
+  * 50 Flats
+  * 50 Darks
+  * 50 Dark Flats
+  * ISO 800
+  * Sensor temp = -5C
+
+Processing:
+
+  * DynamicCrop
+  * Dynamic Background Extraction
+  * Split RGB Channels
+  * PixelMath Create Ha and Oiii images (Ha = 0.7R + 0.25G + 0.05B and Oiii = 0.05R + 0.7G + 0.25B)
+  * Linear Fit Oiii to Ha
+  * PixelMath HOO with formula from thecoldestnights.com
+  * EZ Denoise
+  * Masks/Stretch/Sa",https://www.reddit.com/comments/ko4029/_/gho6tl3,0.0,0.15,0.25,app_opportunity,0.25,D,discard,0,0,1,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
+gho6uzv,tulsa,1.GUTS Church always hospitable 2.The sheraton hotel lobby bathroom they import 300 thread triple ply silk tp. 3. Restaurants and gas stations are too dangerous. 4. Idk if it's really weird or not but I was pinching one off at a tgi friday's a few years ago when a tornado came right in the middle of it. Half the staff and a few other patrons had to barricade themselves in there with me while I unleashed everything I had. The lights went out and within 30 seconds. They decided to risk their lives and go back into the dining room luckily only one person suffered minor injuries,https://www.reddit.com/comments/knmqrp/_/gho6uzv,0.0,0.0,0.0,app_opportunity,0.0,D,discard,1,0,0,,codex-agent reviewed under market-research-relevance-v1 on 2026-06-14
