@@ -68,6 +68,10 @@ def apply_annotations(args):
     )
     for row in rows:
         source_id = row["source_id"]
+        if "text_excerpt" in row:
+            row["text_excerpt"] = "\n".join(
+                line.rstrip() for line in row["text_excerpt"].splitlines()
+            ).strip()
         for domain in DOMAINS:
             row[f"label_{domain}"] = "1" if source_id in positives[domain] else "0"
         row["false_positive_category"] = categories.get(source_id, "")
@@ -76,7 +80,7 @@ def apply_annotations(args):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = output_path.with_name(output_path.name + ".tmp")
     with temp_path.open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer = csv.DictWriter(file, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     temp_path.replace(output_path)

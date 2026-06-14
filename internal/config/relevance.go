@@ -15,10 +15,13 @@ type RelevanceTiers struct {
 }
 
 type RelevanceDomain struct {
-	Name                 string             `yaml:"name" json:"name"`
-	GroupWeights         map[string]float64 `yaml:"group_weights" json:"group_weights"`
-	RequiredAnyTerms     []string           `yaml:"required_any_terms" json:"required_any_terms"`
-	SubredditPriorWeight float64            `yaml:"subreddit_prior_weight" json:"subreddit_prior_weight"`
+	Name                  string             `yaml:"name" json:"name"`
+	GroupWeights          map[string]float64 `yaml:"group_weights" json:"group_weights"`
+	ContextWeights        map[string]float64 `yaml:"context_weights" json:"context_weights"`
+	ContextPenaltyWeights map[string]float64 `yaml:"context_penalty_weights" json:"context_penalty_weights"`
+	RequiredAnyTerms      []string           `yaml:"required_any_terms" json:"required_any_terms"`
+	RequiredAnyGroups     []string           `yaml:"required_any_groups" json:"required_any_groups"`
+	SubredditPriorWeight  float64            `yaml:"subreddit_prior_weight" json:"subreddit_prior_weight"`
 }
 
 type SignalMapping struct {
@@ -86,6 +89,12 @@ func (cfg RelevanceConfig) Validate() error {
 				return fmt.Errorf("relevance domain %q group %q weight must be within (0, 1]", name, group)
 			}
 		}
+		if err := validateRelevanceTermWeights(name, "context", domain.ContextWeights); err != nil {
+			return err
+		}
+		if err := validateRelevanceTermWeights(name, "context penalty", domain.ContextPenaltyWeights); err != nil {
+			return err
+		}
 		requiredTerms := map[string]struct{}{}
 		for _, term := range domain.RequiredAnyTerms {
 			normalized := strings.ToLower(strings.TrimSpace(term))
@@ -96,6 +105,24 @@ func (cfg RelevanceConfig) Validate() error {
 				return fmt.Errorf("relevance domain %q contains duplicate required term %q", name, term)
 			}
 			requiredTerms[normalized] = struct{}{}
+		}
+		requiredGroups := map[string]struct{}{}
+		for _, group := range domain.RequiredAnyGroups {
+			normalized := strings.TrimSpace(group)
+			if normalized == "" {
+				return fmt.Errorf("relevance domain %q contains an empty required group", name)
+			}
+			if _, exists := domain.GroupWeights[normalized]; !exists {
+				return fmt.Errorf(
+					"relevance domain %q requires group %q without assigning it a weight",
+					name,
+					group,
+				)
+			}
+			if _, exists := requiredGroups[normalized]; exists {
+				return fmt.Errorf("relevance domain %q contains duplicate required group %q", name, group)
+			}
+			requiredGroups[normalized] = struct{}{}
 		}
 	}
 
@@ -110,6 +137,29 @@ func (cfg RelevanceConfig) Validate() error {
 		mappings[mapping.RuleGroup] = struct{}{}
 		if mapping.Score <= 0 || mapping.Score > 1 {
 			return fmt.Errorf("signal mapping %q score must be within (0, 1]", mapping.RuleGroup)
+		}
+	}
+	return nil
+}
+
+func validateRelevanceTermWeights(domain, kind string, weights map[string]float64) error {
+	normalizedTerms := map[string]struct{}{}
+	for term, weight := range weights {
+		normalized := strings.ToLower(strings.TrimSpace(term))
+		if normalized == "" {
+			return fmt.Errorf("relevance domain %q contains an empty %s term", domain, kind)
+		}
+		if _, exists := normalizedTerms[normalized]; exists {
+			return fmt.Errorf("relevance domain %q contains duplicate %s term %q", domain, kind, term)
+		}
+		normalizedTerms[normalized] = struct{}{}
+		if weight <= 0 || weight > 1 {
+			return fmt.Errorf(
+				"relevance domain %q %s term %q weight must be within (0, 1]",
+				domain,
+				kind,
+				term,
+			)
 		}
 	}
 	return nil

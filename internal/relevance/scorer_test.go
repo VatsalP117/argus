@@ -82,6 +82,68 @@ func TestScoreProducesDomainTiersAndRetentionDecisions(t *testing.T) {
 	}
 }
 
+func TestScoreUsesContextBoostsPenaltiesAndRequiredGroups(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "candidates.parquet")
+	createContextCandidateFixture(t, inputPath)
+
+	cfg := config.RelevanceConfig{
+		Version: "test_v2",
+		Tiers: config.RelevanceTiers{
+			A: 0.80,
+			B: 0.60,
+			C: 0.40,
+		},
+		Domains: []config.RelevanceDomain{
+			{
+				Name:             "travel",
+				RequiredAnyTerms: []string{"visa"},
+				GroupWeights: map[string]float64{
+					"travel_language": 0.50,
+				},
+				ContextWeights: map[string]float64{
+					"work visa": 0.20,
+				},
+				ContextPenaltyWeights: map[string]float64{
+					"visa card": 0.70,
+				},
+			},
+			{
+				Name:              "app_opportunity",
+				RequiredAnyGroups: []string{"product_and_tool_language"},
+				GroupWeights: map[string]float64{
+					"product_and_tool_language": 0.25,
+					"pain_language":             0.15,
+				},
+				ContextWeights: map[string]float64{
+					"laggy":         0.20,
+					"does not work": 0.20,
+				},
+			},
+		},
+	}
+
+	result, err := Score(context.Background(), Options{
+		InputPath:      inputPath,
+		OutputPath:     filepath.Join(dir, "scores.parquet"),
+		ScriptPath:     filepath.Join("..", "..", "scripts", "dev", "duckdb_score_candidates.py"),
+		TempDir:        filepath.Join(dir, "duckdb-tmp"),
+		MemoryLimit:    "1GB",
+		Threads:        1,
+		RelevanceRules: cfg,
+	})
+	if err != nil {
+		t.Fatalf("score candidates: %v", err)
+	}
+
+	if result.RowsCandidates != 5 || result.RowsScored != 10 {
+		t.Fatalf("unexpected scoring counts: %+v", result)
+	}
+	if result.RowsRetainedCandidates != 2 {
+		t.Fatalf("expected genuine visa and broken app to retain, got %+v", result)
+	}
+}
+
 func createCandidateFixture(t *testing.T, outputPath string) {
 	t.Helper()
 	script := `
@@ -92,12 +154,12 @@ con.execute("""
 COPY (
     SELECT * FROM (
         VALUES
-            ('comment', 'travel-pain', false, false, '["travel_language","pain_language"]'::JSON, '["visa","frustrating"]'::JSON),
-            ('comment', 'prior-only', true, false, '[]'::JSON, '[]'::JSON),
-            ('comment', 'saas-request', false, false, '["product_and_tool_language","business_workflow_language","request_intent"]'::JSON, '["software","workflow","need an app"]'::JSON),
-            ('comment', 'generic-refund', false, false, '["travel_language","pricing_and_payment","comparison_and_dissatisfaction"]'::JSON, '["refund","customer service"]'::JSON),
-            ('comment', 'moderation-bot', false, true, '["product_and_tool_language","business_workflow_language","request_intent"]'::JSON, '["software","reporting","feature request"]'::JSON)
-    ) AS t(source_type, source_id, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
+            ('comment', 'travel-pain', 'travel', 'Visa processing is frustrating.', false, false, '["travel_language","pain_language"]'::JSON, '["visa","frustrating"]'::JSON),
+            ('comment', 'prior-only', 'travel', 'A cheerful trip story.', true, false, '[]'::JSON, '[]'::JSON),
+            ('comment', 'saas-request', 'business', 'I need an app for this workflow.', false, false, '["product_and_tool_language","business_workflow_language","request_intent"]'::JSON, '["software","workflow","need an app"]'::JSON),
+            ('comment', 'generic-refund', 'shopping', 'The refund customer service was slow.', false, false, '["travel_language","pricing_and_payment","comparison_and_dissatisfaction"]'::JSON, '["refund","customer service"]'::JSON),
+            ('comment', 'moderation-bot', 'tools', 'Feature request reporting bot.', false, true, '["product_and_tool_language","business_workflow_language","request_intent"]'::JSON, '["software","reporting","feature request"]'::JSON)
+    ) AS t(source_type, source_id, subreddit, candidate_text, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
 )
 TO ? (FORMAT PARQUET)
 """, [sys.argv[1]])
@@ -105,5 +167,31 @@ TO ? (FORMAT PARQUET)
 	cmd := exec.Command("python3", "-c", script, outputPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("create candidate fixture: %v: %s", err, output)
+	}
+}
+
+func createContextCandidateFixture(t *testing.T, outputPath string) {
+	t.Helper()
+	script := `
+import duckdb
+import sys
+con = duckdb.connect()
+con.execute("""
+COPY (
+    SELECT * FROM (
+        VALUES
+            ('comment', 'genuine-visa', 'immigration', 'My work visa sponsorship was rejected.', false, false, '["travel_language"]'::JSON, '["visa"]'::JSON),
+            ('comment', 'visa-card', 'creditcards', 'My Visa card payment was rejected.', false, false, '["travel_language","pricing_and_payment"]'::JSON, '["visa","payment"]'::JSON),
+            ('comment', 'broken-app', 'android', 'The app is laggy and does not work.', false, false, '["product_and_tool_language","pain_language"]'::JSON, '["app"]'::JSON),
+            ('comment', 'generic-app', 'android', 'I downloaded the app yesterday.', false, false, '["product_and_tool_language"]'::JSON, '["app"]'::JSON),
+            ('comment', 'pain-without-product', 'life', 'This process is laggy and does not work.', false, false, '["pain_language"]'::JSON, '["frustrating"]'::JSON)
+    ) AS t(source_type, source_id, subreddit, candidate_text, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
+)
+TO ? (FORMAT PARQUET)
+""", [sys.argv[1]])
+`
+	cmd := exec.Command("python3", "-c", script, outputPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create contextual candidate fixture: %v: %s", err, output)
 	}
 }

@@ -37,3 +37,25 @@ func TestLoadRelevanceConfigDefinesExplainableDomainsAndTiers(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadRelevanceV2DefinesContextAndEligibilityControls(t *testing.T) {
+	cfg, err := LoadRelevanceConfig("../../configs/relevance/deterministic-v2.yaml")
+	if err != nil {
+		t.Fatalf("load relevance v2 config: %v", err)
+	}
+	if cfg.Version != "deterministic_v2" {
+		t.Fatalf("unexpected version: %s", cfg.Version)
+	}
+
+	for _, domain := range cfg.Domains {
+		if len(domain.ContextWeights) == 0 {
+			t.Fatalf("domain %q has no contextual boosts", domain.Name)
+		}
+		if len(domain.ContextPenaltyWeights) == 0 {
+			t.Fatalf("domain %q has no ambiguity penalties", domain.Name)
+		}
+		if domain.Name != "travel" && len(domain.RequiredAnyGroups) == 0 {
+			t.Fatalf("opportunity domain %q has no required evidence groups", domain.Name)
+		}
+	}
+}
