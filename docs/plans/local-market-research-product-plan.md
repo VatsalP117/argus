@@ -828,6 +828,8 @@ The first implementation sequence should be:
 
 The full immediate backlog was completed on `2026-06-13`. The local database is initialized at schema version `3`, and one shard completed scan, scoring, transactional commit, reconciliation, validation, and audited cleanup.
 
-The next executor should build the labelled relevance evaluation set and calibrate `deterministic_v2`. Do not widen ingestion yet: the first durable sample exposed false positives around the `Visa` payment brand, political immigration discussion, and generic workflow/product vocabulary.
+The labelled relevance fixture and `deterministic_v2` calibration were completed on `2026-06-14`. The expanded 339-row fixture includes every v2-retained row from the bounded shard; v2 achieved `85.1%` retained precision and `80.0%` retained recall.
+
+The next executor may run one adjacent bounded shard and publish its yield. Do not run a full month until the adjacent-shard review and a small independent human spot-check confirm that the agent-reviewed fixture is directionally sound.
 
 This sequence proves the storage lifecycle before spending time on the web product or a large ingest.

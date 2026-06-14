@@ -11,13 +11,25 @@ go run ./cmd/score-candidates \
   --scan-checkpoint state/checkpoints/candidate-scan/<manifest-id>/<entry-id>.json
 ```
 
-The scorer reads `configs/relevance/deterministic-v1.yaml` and emits one row per candidate and domain:
+The scorer reads `configs/relevance/deterministic-v2.yaml` by default and emits one row per candidate and domain:
 
 - `A` and `B`: retain
 - `C`: evaluation pool
 - `D`: discard after metrics
 
-Semantic and classifier scores remain null. All current decisions are deterministic and explainable.
+Semantic and classifier scores remain null. Context boosts, ambiguity penalties, required evidence groups, and all current decisions are deterministic and explainable.
+
+## Evaluate
+
+Use the checked-in labelled fixture to compare a score output before committing it:
+
+```bash
+go run ./cmd/evaluate-relevance \
+  --labels evaluations/relevance/broad-shard-2021-01-000-v1-labels.csv \
+  --score-path <score-parquet>
+```
+
+The command reports candidate and per-domain retained precision/recall. It returns exit status `3` when candidate retained precision is below `70%`.
 
 ## Commit
 
@@ -59,4 +71,4 @@ It records one cleanup event per file, removes candidate and score Parquet, then
 
 ## Current Gate
 
-Do not scan another shard yet. `deterministic_v1` is a calibration model, not a production relevance model. Build and label the evaluation set before widening ingestion.
+`deterministic_v2` passed the expanded 339-row engineering fixture at `85.1%` retained precision and `80.0%` retained recall. One adjacent bounded shard may be scanned and reviewed next. Do not run a full month until the new-shard yield is reviewed and a small independent human spot-check confirms the agent-reviewed labels.

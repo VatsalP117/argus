@@ -33,7 +33,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	var force bool
 
 	flags.StringVar(&scanCheckpointPath, "scan-checkpoint", "", "completed candidate scan checkpoint")
-	flags.StringVar(&relevanceConfigPath, "relevance-config", "configs/relevance/deterministic-v1.yaml", "path to deterministic relevance rules")
+	flags.StringVar(&relevanceConfigPath, "relevance-config", "configs/relevance/deterministic-v2.yaml", "path to deterministic relevance rules")
 	flags.StringVar(&outputPath, "output-path", "", "relevance score Parquet output path")
 	flags.StringVar(&scorerScript, "scorer-script", "scripts/dev/duckdb_score_candidates.py", "path to DuckDB scorer adapter")
 	flags.StringVar(&duckDBMemoryLimit, "duckdb-memory-limit", "4GB", "DuckDB memory limit")
