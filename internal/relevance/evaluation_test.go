@@ -322,7 +322,11 @@ func readCSV(t *testing.T, path string) [][]string {
 	if err != nil {
 		t.Fatalf("open %s: %v", path, err)
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			t.Errorf("close %s: %v", path, cerr)
+		}
+	}()
 	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)

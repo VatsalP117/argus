@@ -58,6 +58,12 @@ def evaluate(args):
         raise ValueError("minimum retain precision must be within (0, 1]")
     if not 0 <= args.minimum_weighted_recall <= 1:
         raise ValueError("minimum weighted recall must be within [0, 1]")
+    if not 0 < args.minimum_domain_precision <= 1:
+        raise ValueError("minimum domain precision must be within (0, 1]")
+    if args.minimum_domain_retained_count < 0:
+        raise ValueError("minimum domain retained count must be non-negative")
+    if not 0 <= args.max_false_positive_category_rate <= 1:
+        raise ValueError("max false-positive category rate must be within [0, 1]")
 
     con = duckdb.connect()
     try:
@@ -190,27 +196,34 @@ def evaluate(args):
         if stratum_mismatch:
             raise ValueError(f"{stratum_mismatch} label rows have a sample_stratum that does not match the score-derived stratum")
 
-        # Every non-empty stratum in the fixture must be present in the score-derived populations
-        # and its claimed population must match the derived population.
+        # stratum_population must be numeric, non-null, and match the derived population row-by-row.
+        non_numeric_population = int(
+            con.execute(
+                """
+                SELECT count(*)
+                FROM labels
+                WHERE stratum_population IS NULL
+                   OR try_cast(stratum_population AS BIGINT) IS NULL
+                """
+            ).fetchone()[0]
+        )
+        if non_numeric_population:
+            raise ValueError("stratum_population contains null or non-numeric values")
+
         population_mismatch = int(
             con.execute(
                 """
                 SELECT count(*)
-                FROM (
-                    SELECT
-                        l.sample_stratum,
-                        max(l.stratum_population) AS label_population,
-                        d.population AS derived_population
-                    FROM labels l
-                    JOIN derived_populations d ON l.sample_stratum = d.sample_stratum
-                    GROUP BY l.sample_stratum, d.population
-                )
-                WHERE label_population <> derived_population
+                FROM labels l
+                JOIN derived_populations d ON l.sample_stratum = d.sample_stratum
+                WHERE cast(l.stratum_population AS BIGINT) <> d.population
                 """
             ).fetchone()[0]
         )
         if population_mismatch:
-            raise ValueError("stratum_population values do not match score-derived populations")
+            raise ValueError(
+                f"{population_mismatch} label rows have a stratum_population that does not match the score-derived population"
+            )
 
         # Require every stratum that has a non-zero derived population to be represented in labels.
         missing_strata = [
@@ -280,17 +293,35 @@ def evaluate(args):
                 f"{extra_retained_labels} retained labels are not score-derived retained candidates"
             )
 
-        joined_score_rows = int(
+        invalid_score_cardinality = int(
             con.execute(
                 """
+                WITH expected AS (
+                    SELECT l.source_type, l.source_id, d.domain
+                    FROM labels l
+                    CROSS JOIN (
+                        SELECT 'travel' AS domain
+                        UNION ALL SELECT 'saas_opportunity'
+                        UNION ALL SELECT 'app_opportunity'
+                    ) d
+                ),
+                observed AS (
+                    SELECT source_type, source_id, domain, count(*) AS n
+                    FROM scores
+                    WHERE domain IN ('travel', 'saas_opportunity', 'app_opportunity')
+                    GROUP BY source_type, source_id, domain
+                )
                 SELECT count(*)
-                FROM labels l
-                JOIN scores s USING (source_type, source_id)
-                WHERE s.domain IN ('travel', 'saas_opportunity', 'app_opportunity')
+                FROM expected e
+                LEFT JOIN observed o
+                  ON o.source_type = e.source_type
+                 AND o.source_id = e.source_id
+                 AND o.domain = e.domain
+                WHERE coalesce(o.n, 0) <> 1
                 """
             ).fetchone()[0]
         )
-        if joined_score_rows != rows_labeled * len(DOMAINS):
+        if invalid_score_cardinality != 0:
             raise ValueError(
                 "score input does not contain exactly one row per labelled candidate and domain"
             )

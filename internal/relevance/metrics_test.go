@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -354,6 +355,54 @@ func TestEvaluateRejectsMismatchedStratum(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected error for mismatched sample_stratum")
+	}
+}
+
+func TestEvaluateRejectsCorruptedScoreCardinality(t *testing.T) {
+	dir := t.TempDir()
+	candidatePath := filepath.Join(dir, "candidates.parquet")
+	scorePath := filepath.Join(dir, "scores.parquet")
+	createEvaluationFixture(t, candidatePath, scorePath)
+
+	// Create a corrupted score file: for retain-a, duplicate the travel row and drop the app_opportunity row.
+	corruptScorePath := filepath.Join(dir, "scores-corrupt.parquet")
+	script := `
+import duckdb
+import sys
+src, dst = sys.argv[1], sys.argv[2]
+con = duckdb.connect()
+con.execute(f"""
+CREATE TEMP TABLE corrupt_scores AS
+SELECT * FROM read_parquet('{src}')
+WHERE NOT (source_id = 'retain-a' AND domain = 'app_opportunity')
+UNION ALL
+SELECT * FROM read_parquet('{src}')
+WHERE source_id = 'retain-a' AND domain = 'travel'
+""")
+con.execute(f"COPY (SELECT * FROM corrupt_scores) TO '{dst}' (FORMAT PARQUET)")
+`
+	cmd := exec.Command("python3", "-c", script, scorePath, corruptScorePath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create corrupt score fixture: %v: %s", err, output)
+	}
+
+	labelsPath := writeLabels(t, dir, []labelRow{
+		{"retain-a", "1", "0", "0", "", "", "https://reddit.test/retain-a"},
+		{"retain-b", "0", "0", "0", "", "", "https://reddit.test/retain-b"},
+		{"evaluate-a", "1", "0", "0", "", "", "https://reddit.test/evaluate-a"},
+		{"evaluate-b", "0", "1", "1", "", "", "https://reddit.test/evaluate-b"},
+		{"discard-a", "0", "0", "0", "", "", "https://reddit.test/discard-a"},
+		{"discard-b", "0", "0", "0", "", "", "https://reddit.test/discard-b"},
+	})
+
+	_, err := Evaluate(context.Background(), EvaluationOptions{
+		LabelsPath:             labelsPath,
+		ScorePath:              corruptScorePath,
+		ScriptPath:             filepath.Join("..", "..", "scripts", "dev", "duckdb_evaluate_relevance.py"),
+		MinimumRetainPrecision: 0.70,
+	})
+	if err == nil {
+		t.Fatalf("expected error for corrupted score cardinality")
 	}
 }
 
