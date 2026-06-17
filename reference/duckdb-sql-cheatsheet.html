@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DuckDB And SQL Cheatsheet For Argus</title>
+  <style>
+    :root { --ink:#18221d; --paper:#fbfaf4; --line:#d8d2c3; --accent:#0f766e; --code:#eee8d8; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family: Georgia, "Times New Roman", serif; }
+    main { max-width:980px; margin:0 auto; padding:44px 24px 72px; }
+    h1 { font-size:40px; margin:0 0 10px; }
+    section { border-top:2px solid var(--line); padding-top:18px; margin-top:26px; }
+    h2 { color:var(--accent); }
+    pre { overflow:auto; background:var(--code); border-radius:8px; padding:16px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    p, li { line-height:1.55; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>DuckDB And SQL Cheatsheet For Argus</h1>
+  <p>DuckDB is the local analytical engine Argus uses to scan Parquet, run checks, build outputs, and maintain the durable research corpus.</p>
+  <section>
+    <h2>Read Parquet</h2>
+    <pre><code>SELECT *
+FROM read_parquet('data/tmp/candidates/*.parquet')
+LIMIT 10;</code></pre>
+    <p>In Argus, Parquet is both a remote archive format and a temporary staging format.</p>
+  </section>
+  <section>
+    <h2>Inspect Shape</h2>
+    <pre><code>DESCRIBE SELECT *
+FROM read_parquet('data/tmp/candidates/example.parquet');</code></pre>
+    <p>Use this before writing assumptions into SQL or Go structs.</p>
+  </section>
+  <section>
+    <h2>Data Quality Counts</h2>
+    <pre><code>SELECT
+  count(*) AS rows_total,
+  count(*) FILTER (WHERE clean_text = '') AS empty_clean_text,
+  count(*) FILTER (WHERE source_url IS NULL) AS missing_source_url
+FROM documents;</code></pre>
+    <p>Many Argus checks are this idea scaled up: count, group, prove that bad states are absent or bounded.</p>
+  </section>
+  <section>
+    <h2>Reconciliation Equation</h2>
+    <pre><code>SELECT
+  rows_seen = rows_rejected_early + rows_staged AS source_equation_valid,
+  rows_staged = rows_retained + rows_rejected_late + rows_quarantined AS staging_equation_valid
+FROM batch_reconciliation;</code></pre>
+    <p>This is the heartbeat of safe cleanup. If the rows do not account for themselves, staging should not be deleted.</p>
+  </section>
+  <section>
+    <h2>Official References</h2>
+    <p><a href="https://duckdb.org/docs/">DuckDB docs</a>, <a href="https://duckdb.org/docs/current/data/parquet/overview.html">DuckDB Parquet docs</a>, and <a href="https://parquet.apache.org/docs/">Apache Parquet docs</a>.</p>
+  </section>
+</main>
+</body>
+</html>

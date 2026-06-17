@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Argus Data Engineering Onboarding Course</title>
+  <style>
+    :root { --ink:#17211c; --muted:#66746b; --paper:#fbfaf4; --line:#d8d2c3; --accent:#0f766e; --gold:#a16207; }
+    body { margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:linear-gradient(180deg,#eef4ef 0,#fbfaf4 360px); }
+    main { max-width:1080px; margin:0 auto; padding:54px 24px 80px; }
+    h1 { font-size:48px; margin:0 0 12px; letter-spacing:0; }
+    .lede { font-size:20px; line-height:1.55; max-width:760px; color:#334139; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; margin-top:34px; }
+    a.card { display:block; color:inherit; text-decoration:none; border:1px solid var(--line); background:#fffdf7; border-radius:8px; padding:18px; min-height:132px; }
+    a.card:hover { border-color:var(--accent); box-shadow:0 10px 28px rgba(23,33,28,.08); }
+    .num { color:var(--gold); font-weight:bold; font-size:14px; }
+    h2 { font-size:21px; margin:8px 0; }
+    p { line-height:1.5; color:var(--muted); }
+    .refs { margin-top:34px; padding-top:22px; border-top:2px solid var(--line); }
+    .refs a { color:var(--accent); margin-right:16px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Argus Data Engineering Onboarding</h1>
+  <p class="lede">A repo-specific course for a fullstack developer learning enough data engineering to work confidently on Argus. Each lesson is short, local, and includes a quick feedback check.</p>
+  <section class="grid">
+    <a class="card" href="0001-local-first-mental-model.html"><span class="num">Lesson 1</span><h2>Local-First Mental Model</h2><p>Why Argus uses DuckDB, Parquet, and local artifacts instead of a warehouse-first design.</p></a>
+    <a class="card" href="0002-parquet-and-duckdb.html"><span class="num">Lesson 2</span><h2>Parquet And DuckDB</h2><p>How columnar files and an embedded analytical engine replace many backend assumptions.</p></a>
+    <a class="card" href="0003-manifests-and-provenance.html"><span class="num">Lesson 3</span><h2>Manifests And Provenance</h2><p>How Argus makes a remote archive slice reproducible.</p></a>
+    <a class="card" href="0004-batches-checkpoints-idempotency.html"><span class="num">Lesson 4</span><h2>Batches And Checkpoints</h2><p>Why data jobs need resumable, checksum-backed work units.</p></a>
+    <a class="card" href="0005-data-layers.html"><span class="num">Lesson 5</span><h2>Data Layers</h2><p>Remote archive, staging, clean data, marts, and durable corpus.</p></a>
+    <a class="card" href="0006-schema-and-migrations.html"><span class="num">Lesson 6</span><h2>Schema And Migrations</h2><p>How durable research tables model documents, signals, relevance, and operations.</p></a>
+    <a class="card" href="0007-validation-and-reconciliation.html"><span class="num">Lesson 7</span><h2>Validation And Reconciliation</h2><p>How Argus proves rows are complete before trusting or deleting artifacts.</p></a>
+    <a class="card" href="0008-candidate-scan-and-relevance.html"><span class="num">Lesson 8</span><h2>Candidate Scan And Relevance</h2><p>High recall first, precision gates later: the core research filtering loop.</p></a>
+    <a class="card" href="0009-evaluation-and-calibration.html"><span class="num">Lesson 9</span><h2>Evaluation And Calibration</h2><p>Precision, recall, strata, traps, and why failed gates stop wider ingestion.</p></a>
+    <a class="card" href="0010-query-ask-and-evidence.html"><span class="num">Lesson 10</span><h2>Query, Ask, Evidence</h2><p>How local retrieval and LLM answers stay grounded in source rows.</p></a>
+    <a class="card" href="0011-go-orchestration-and-tests.html"><span class="num">Lesson 11</span><h2>Go Orchestration And Tests</h2><p>How the Go code wraps configs, Python/DuckDB adapters, JSON outputs, and fixtures.</p></a>
+  </section>
+  <section class="refs">
+    <h2>Reference Sheets</h2>
+    <p><a href="../reference/argus-glossary.html">Glossary</a><a href="../reference/pipeline-map.html">Pipeline Map</a><a href="../reference/duckdb-sql-cheatsheet.html">DuckDB SQL</a><a href="../reference/safety-checklist.html">Safety Checklist</a></p>
+  </section>
+</main>
+</body>
+</html>

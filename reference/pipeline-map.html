@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Argus Pipeline Map</title>
+  <style>
+    :root { --ink:#17211c; --muted:#66746b; --paper:#fbfaf4; --green:#0f766e; --gold:#a16207; --red:#b91c1c; --line:#d8d2c3; }
+    body { margin:0; font-family: Georgia, "Times New Roman", serif; background:var(--paper); color:var(--ink); }
+    main { max-width:1050px; margin:0 auto; padding:44px 24px 72px; }
+    h1 { font-size:42px; margin:0 0 10px; }
+    .flow { display:grid; gap:12px; margin-top:26px; }
+    .step { display:grid; grid-template-columns:130px 1fr; gap:18px; border:1px solid var(--line); background:#fffdf7; border-radius:8px; padding:18px; }
+    .phase { color:#fff; background:var(--green); border-radius:6px; padding:8px 10px; text-align:center; font-weight:bold; height:max-content; }
+    h2 { margin:0 0 8px; font-size:20px; }
+    p { margin:0; line-height:1.55; }
+    .guard { color:var(--red); font-weight:bold; }
+    .artifact { color:var(--gold); font-weight:bold; }
+    @media (max-width:650px){ .step{grid-template-columns:1fr;} .phase{text-align:left;} }
+    @media print { .step { break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Argus Pipeline Map</h1>
+  <p>Use this as the one-page route map. The important shape is not "run scripts in order"; it is "move from recoverable source to trusted evidence while preserving proof."</p>
+  <section class="flow">
+    <article class="step"><div class="phase">Phase 0</div><div><h2>Bootstrap</h2><p>Install local requirements, check disk capacity, prepare DuckDB and Python support. Guard: do not start broad processing if local capacity is unsafe.</p></div></article>
+    <article class="step"><div class="phase">Phase 1</div><div><h2>Archive Validation</h2><p>Confirm the remote archive is readable and has the expected Reddit fields. Artifact: discovery SQL and archive validation notes.</p></div></article>
+    <article class="step"><div class="phase">Phase 2</div><div><h2>Manifest And Ingest</h2><p>Build pinned manifests for bounded source shards, then ingest only scoped data. Artifact: manifest plus checkpoints.</p></div></article>
+    <article class="step"><div class="phase">Phase 3</div><div><h2>Clean Transform</h2><p>Normalize text, preserve original text, deduplicate, flag removed/deleted/bot-like rows, and keep provenance.</p></div></article>
+    <article class="step"><div class="phase">Phase 4</div><div><h2>Signal Enrichment</h2><p>Extract deterministic research signals and entities. Artifact: signal/entity outputs and validation checks.</p></div></article>
+    <article class="step"><div class="phase">Phase 5</div><div><h2>Evidence Export</h2><p>Package results for analyst review with source IDs, source URLs, and evidence snippets.</p></div></article>
+    <article class="step"><div class="phase">Phase 6</div><div><h2>Query And Ask</h2><p>Expose guarded read-only query workflows and evidence-backed LLM answers over curated local views.</p></div></article>
+    <article class="step"><div class="phase">Phase 7</div><div><h2>Broad Candidate Scan</h2><p>Scan pinned shards with high-recall rules. <span class="artifact">Output is temporary candidate Parquet.</span></p></div></article>
+    <article class="step"><div class="phase">Phase 8</div><div><h2>Score, Commit, Cleanup</h2><p>Score candidates, evaluate quality, commit retained evidence transactionally, reconcile counts, and only then delete staging. <span class="guard">Quality gates can stop the pipeline.</span></p></div></article>
+  </section>
+</main>
+</body>
+</html>

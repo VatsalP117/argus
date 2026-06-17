@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 3: Manifests And Provenance</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:var(--good)}.no{color:var(--bad)}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 3: Manifests And Provenance</h1>
+<p><strong>Skill:</strong> explain why a data pipeline needs pinned input definitions.</p>
+<div class="panel"><p>A manifest is Argus' exact work order. It says which archive repo, revision, month, record type, shard path, source identity, and byte size belong to a run. Without it, a later result cannot prove what input it came from.</p></div>
+<h2>The One Thing</h2>
+<p>Provenance is not a nice-to-have. In Argus, every retained document must be traceable back to the remote source and the pipeline artifacts that selected it. The manifest is the first link in that chain.</p>
+<p>Repo anchors: <code>cmd/manifest-builder/main.go</code>, <code>internal/manifest/manifest.go</code>, <code>configs/pipelines/pilot-travel-q1-2021.yaml</code>.</p>
+<h2>Fullstack Bridge</h2>
+<p>A manifest is like a lockfile for data inputs. It prevents "it worked on my dataset" by making the dataset itself part of the recorded build context.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="a">
+<p>What question should a manifest answer?</p>
+<button data-choice="a">Exactly which upstream data objects did this run intend to process?</button>
+<button data-choice="b">Which CSS bundle should the frontend load?</button>
+<button data-choice="c">Which rows should be deleted after scoring?</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/">Designing Data-Intensive Applications</a> for durable data-system thinking, plus <a href="../reference/argus-glossary.html">the glossary</a>.</p>
+<p>Ask the agent: "Walk me through one Argus manifest entry field by field."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: the manifest records the intended upstream input set.':'Not quite. Think of the manifest as the data-input lockfile.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

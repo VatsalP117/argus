@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 5: Data Layers</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}.layers{display:grid;gap:10px}.layer{border-left:5px solid var(--accent);background:#fffdf7;padding:12px 14px;border-radius:6px}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 5: Data Layers</h1>
+<p><strong>Skill:</strong> name each Argus data layer and what it is responsible for.</p>
+<div class="panel"><p>Data engineering systems often separate layers so each stage has a clear contract. Argus uses layers to avoid mixing recoverable source data, temporary processing files, cleaned analytical text, curated research outputs, and durable product state.</p></div>
+<h2>The One Thing</h2>
+<section class="layers">
+<div class="layer"><strong>Remote archive:</strong> recoverable upstream Reddit Parquet.</div>
+<div class="layer"><strong>Temporary staging:</strong> bounded candidate and score Parquet that can be deleted after validation.</div>
+<div class="layer"><strong>Clean layer:</strong> normalized text, flags, dedupe, and provenance.</div>
+<div class="layer"><strong>Marts:</strong> curated views/tables shaped for research questions.</div>
+<div class="layer"><strong>Durable corpus:</strong> <code>data/argus.duckdb</code>, the local product database for retained evidence and metadata.</div>
+</section>
+<p>Repo anchors: <code>docs/plans/local-market-research-product-plan.md</code>, <code>docs/runbooks/phase-3-clean-transform.md</code>, <code>sql/marts/</code>, <code>sql/migrations/</code>.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="c">
+<p>Which layer should survive as the long-lived local research corpus?</p>
+<button data-choice="a">Every temporary candidate Parquet file.</button>
+<button data-choice="b">DuckDB spill files.</button>
+<button data-choice="c"><code>data/argus.duckdb</code> plus reproducibility metadata.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="https://www.getdbt.com/blog/modular-data-modeling-techniques">dbt modular data modeling techniques</a> and <a href="../reference/pipeline-map.html">pipeline map</a>.</p>
+<p>Ask the agent: "Which Argus files represent each data layer today?"</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: staging is temporary; the durable corpus is the local product data store.':'Not quite. Separate temporary processing artifacts from durable retained evidence.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 1: Local-First Mental Model</title><style>
+:root{--ink:#17211c;--muted:#647268;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold;margin-top:10px}.ok{color:var(--good)}.no{color:var(--bad)}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 1: Local-First Mental Model</h1>
+<p><strong>Skill:</strong> explain why Argus is local-first and what tradeoff that creates.</p>
+<div class="panel"><p>As a fullstack developer, you may expect a service, app database, background queue, and hosted infra. Argus starts somewhere different: it is a local research pipeline. The useful product is not a live service yet; it is a reproducible way to turn bounded Reddit archive slices into evidence-backed research data.</p></div>
+<h2>The One Thing</h2>
+<p>Argus uses local DuckDB plus Parquet because the project is still proving research value. Local-first keeps cost low, iteration fast, artifacts inspectable, and intermediate data easy to rebuild. The tradeoff is that Argus must be very disciplined about capacity, concurrency, and reproducibility.</p>
+<p>Repo anchors: <code>README.md</code>, <code>docs/decisions/ADR-001-local-first-duckdb.md</code>, <code>docs/decisions/ADR-002-durable-duckdb-and-ephemeral-raw.md</code>.</p>
+<h2>Mental Bridge</h2>
+<p>In a web app, your database is usually the source of truth. In Argus, the durable DuckDB is the local research corpus, but the remote Parquet archive remains the recoverable upstream source. That is why manifests, revisions, checksums, and checkpoints matter so much.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="b">
+<p>Why does Argus avoid a cloud warehouse in v1?</p>
+<button data-choice="a">Because DuckDB is always better than warehouses.</button>
+<button data-choice="b">Because the project is proving a bounded local research workflow before paying operational complexity.</button>
+<button data-choice="c">Because Parquet cannot be used in warehouses.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="https://duckdb.org/docs/">DuckDB docs</a>, <a href="https://www.inkandswitch.com/local-first/">local-first software essay</a>, and <a href="../reference/pipeline-map.html">Argus pipeline map</a>.</p>
+<p>Ask the agent: "Show me where this local-first decision appears in the code."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: Argus is optimizing for bounded, cheap, reproducible learning.':'Not quite. The key is product-stage tradeoff: prove value locally before adding warehouse complexity.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

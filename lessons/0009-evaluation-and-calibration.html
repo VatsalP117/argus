@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 9: Evaluation And Calibration</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 9: Evaluation And Calibration</h1>
+<p><strong>Skill:</strong> interpret why an evaluation failure blocks wider ingestion.</p>
+<div class="panel"><p>Relevance scoring is a product-quality problem. A bad scorer fills the durable corpus with junk or misses the evidence the product is supposed to find. Argus uses labelled fixtures and gates to slow itself down when quality is not good enough.</p></div>
+<h2>The One Thing</h2>
+<p>Precision asks: "Of what we retained, how much was truly relevant?" Recall asks: "Of what was relevant, how much did we retain?" Argus also checks domain-specific precision, false-positive categories, trap leakage, and weighted recall from sampling strata.</p>
+<p>Repo anchors: <code>cmd/export-relevance-eval</code>, <code>cmd/evaluate-relevance</code>, <code>internal/relevance/metrics.go</code>, <code>docs/reports/deterministic-v3-calibration-2026-06-17.md</code>.</p>
+<h2>Fullstack Bridge</h2>
+<p>This is like release gating, but the release artifact is not just code. It is a data selection policy that decides what evidence the product is allowed to trust.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="c">
+<p>If retained precision fails the gate on a fresh adjacent shard, what is the safest next move?</p>
+<button data-choice="a">Run the full month anyway and inspect later.</button>
+<button data-choice="b">Delete the labels because they are inconvenient.</button>
+<button data-choice="c">Stop wider ingestion and run a separate calibration cycle before re-validating.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="https://greatexpectations.io/">GX Core</a> for validation language.</p>
+<p>Ask the agent: "Explain retained precision and weighted recall using the Argus reports."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: failed gates are there to prevent bad data from scaling.':'Not quite. A failed fresh-shard gate means stop, calibrate separately, and revalidate.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>
