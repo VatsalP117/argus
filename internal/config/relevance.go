@@ -21,6 +21,7 @@ type RelevanceDomain struct {
 	ContextPenaltyWeights map[string]float64 `yaml:"context_penalty_weights" json:"context_penalty_weights"`
 	RequiredAnyTerms      []string           `yaml:"required_any_terms" json:"required_any_terms"`
 	RequiredAnyGroups     []string           `yaml:"required_any_groups" json:"required_any_groups"`
+	MinimumGroupMatches   int                `yaml:"minimum_group_matches" json:"minimum_group_matches"`
 	SubredditPriorWeight  float64            `yaml:"subreddit_prior_weight" json:"subreddit_prior_weight"`
 }
 
@@ -77,6 +78,13 @@ func (cfg RelevanceConfig) Validate() error {
 		domains[name] = struct{}{}
 		if len(domain.GroupWeights) == 0 {
 			return fmt.Errorf("relevance domain %q must define group weights", name)
+		}
+		if domain.MinimumGroupMatches < 0 || domain.MinimumGroupMatches > len(domain.GroupWeights) {
+			return fmt.Errorf(
+				"relevance domain %q minimum group matches must be within [0, %d]",
+				name,
+				len(domain.GroupWeights),
+			)
 		}
 		if domain.SubredditPriorWeight < 0 || domain.SubredditPriorWeight > 1 {
 			return fmt.Errorf("relevance domain %q subreddit prior weight must be within [0, 1]", name)

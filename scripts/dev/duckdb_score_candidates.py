@@ -41,9 +41,11 @@ def build_domain_query(domain: dict):
     score_parts = []
     penalty_parts = []
     reason_parts = []
+    matched_group_parts = []
     for group, weight in domain["group_weights"].items():
         matches = group_match(group)
         score_parts.append(f"CASE WHEN {matches} THEN {float(weight)} ELSE 0 END")
+        matched_group_parts.append(f"CASE WHEN {matches} THEN 1 ELSE 0 END")
         reason_parts.append(
             f"CASE WHEN {matches} THEN {sql_string(group)} ELSE NULL::VARCHAR END"
         )
@@ -78,8 +80,16 @@ def build_domain_query(domain: dict):
         group_requirement = " OR ".join(group_match(group) for group in required_groups)
     else:
         group_requirement = "true"
+    minimum_group_matches = int(domain.get("minimum_group_matches", 0))
+    if minimum_group_matches > 0:
+        minimum_group_requirement = (
+            "(" + " + ".join(matched_group_parts) + f") >= {minimum_group_matches}"
+        )
+    else:
+        minimum_group_requirement = "true"
     eligible = (
-        f"(NOT is_bot_like AND ({requirement}) AND ({group_requirement}))"
+        f"(NOT is_bot_like AND ({requirement}) AND ({group_requirement}) "
+        f"AND ({minimum_group_requirement}))"
     )
     score_expression = (
         f"CASE WHEN {eligible} "
