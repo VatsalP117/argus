@@ -59,3 +59,43 @@ func TestLoadRelevanceV2DefinesContextAndEligibilityControls(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadRelevanceV3DefinesVersionedCalibrationCandidate(t *testing.T) {
+	cfg, err := LoadRelevanceConfig("../../configs/relevance/deterministic-v3.yaml")
+	if err != nil {
+		t.Fatalf("load relevance v3 config: %v", err)
+	}
+	if cfg.Version != "deterministic_v3" {
+		t.Fatalf("unexpected version: %s", cfg.Version)
+	}
+
+	foundPenaltyControls := false
+	for _, domain := range cfg.Domains {
+		if len(domain.ContextPenaltyWeights) > 0 {
+			foundPenaltyControls = true
+		}
+	}
+	if !foundPenaltyControls {
+		t.Fatal("expected v3 to define ambiguity or trap penalties")
+	}
+}
+
+func TestRelevanceConfigRejectsImpossibleMinimumGroupMatches(t *testing.T) {
+	cfg := RelevanceConfig{
+		Version: "test_v1",
+		Tiers: RelevanceTiers{A: 0.8, B: 0.6, C: 0.4},
+		Domains: []RelevanceDomain{
+			{
+				Name:                "app_opportunity",
+				MinimumGroupMatches: 2,
+				GroupWeights: map[string]float64{
+					"product_and_tool_language": 0.25,
+				},
+			},
+		},
+	}
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for impossible minimum group matches")
+	}
+}
