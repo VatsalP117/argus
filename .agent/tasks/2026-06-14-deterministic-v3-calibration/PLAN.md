@@ -269,4 +269,3 @@ git diff --check
 8. Complete `IMPLEMENTATION_REPORT.md` before opening the PR.
 9. Do not merge the PR. The reviewer will create `REVIEW.md` after examining the
    review package against `main`.
-

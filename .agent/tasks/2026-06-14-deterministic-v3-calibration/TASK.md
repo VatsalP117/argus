@@ -96,4 +96,3 @@ collapse, or a scorer capability change, stop and write `CHANGE_REQUEST.md`.
 - calibration report
 - completed `IMPLEMENTATION_REPORT.md`
 - passing focused tests and `go test ./...`
-
