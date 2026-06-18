@@ -2,87 +2,85 @@
 
 ## Summary
 
-`deterministic_v4` successfully adds a proximity-aware conjunction scoring
-capability and improves both observed fixtures on every metric with zero new
-false positives, but the `comments-2021-01-001` recall gate (`50%`) cannot be
-met without resolving a label-boundary conflict between the two training
-fixtures.
+The passport/citizenship label-boundary conflict documented in the original
+change request is **resolved** by a human decision. Abstract
+passport/citizenship/vaccine-passport commentary is now out of scope for the
+travel scorer. Seventeen labels were reconciled across both observed fixtures.
 
-Current stopping point:
+After reconciliation, `deterministic_v4` still improves both fixtures versus
+V3 on the same labels, but `comments-2021-01-001` still fails the `50%` recall
+gate. The remaining blocker is a **deterministic recall ceiling**, not a
+label-boundary conflict.
+
+Current stopping point (after label reconciliation):
 
 - `comments-2021-01-000`: pass
-  - exact retained precision: `88.1%` (V3 was `87.3%`)
-  - regenerated full-label recall estimate: `59.0%` (V3 was `55.0%`)
+  - exact retained precision: `85.1%` (V3 on same labels: `84.1%`)
+  - regenerated full-label recall estimate: `59.4%` (V3 on same labels: `55.2%`)
 - `comments-2021-01-001`: fail
-  - exact retained precision: `81.6%` (V3 was `79.4%`)
-  - regenerated full-label recall estimate: `31.6%` (V3 was `27.6%`, gate is
-    `50%`)
+  - exact retained precision: `81.6%` (V3 on same labels: `79.4%`)
+  - regenerated full-label recall estimate: `36.5%` (V3 on same labels: `31.8%`,
+    gate is `50%`)
 
-## Why I Stopped
+## What Was Resolved
 
-The 001 recall gap is dominated by 13 passport/citizenship/vaccine-passport
-candidates at score `0.55` that are labeled travel-positive in `001`. These
-candidates have no travel-process failure, safety, or border-security evidence
-that a general proximity rule can detect. They retain only if passport
-mentions are broadly boosted.
+The human decision (2026-06-18):
 
-The same passport/citizenship text pattern is labeled travel-negative in `000`
-(5 passport negatives at `score >= 0.55`, including `ghnwnyn` at `0.95` and
-`ghnoyns` at `0.75`). Boosting passport mentions enough to retain the 13 `001`
-positives either keeps or newly retains these `000` negatives, dropping `000`
-below its V3 precision baseline and the `75%` gate.
+> For the current travel scorer, only concrete travel/process/document pain is
+> travel-positive. Abstract passport/citizenship/vaccine-passport commentary is
+> out of scope for the current travel scorer, but should be noted as a possible
+> future adjacent research domain.
 
-This is a label-boundary conflict between the two training fixtures, not a
-scorer-expressiveness gap. The two fixtures apply opposite conventions to the
-same text pattern. No general, pattern-based deterministic rule can satisfy
-both simultaneously.
+Thirteen labels in `comments-2021-01-001` and four labels in
+`comments-2021-01-000` were changed from travel-positive to travel-negative.
+All were abstract passport/citizenship/vaccine-passport commentary, policy
+discourse, statistics, opinion, or identity discussion without concrete
+travel-process pain. Nine concrete travel-document/process pain cases were kept
+as travel-positive. See `FIX_REPORT.md` and the calibration report for the full
+table of changes with rationale.
 
-The remaining non-passport recoverable false negatives (24 at
-`score >= 0.45`) would each require `+0.15` boosts. Simulated calibration
-shows this drags in 14 evaluate-tier labeled-negative candidates and collapses
-precision below `71%`, violating the `75%` precision gate.
+## Why I Stopped (Updated)
 
-Continuing with more config-only rule tweaking would require either:
+The passport/citizenship boundary is no longer the blocker. The remaining
+blocker is a deterministic recall ceiling on `comments-2021-01-001`:
 
-1. Encoding fixture-specific passport-context memorization (forbidden by the
-   task constraints).
-2. Lowering the retain threshold (threshold collapse, forbidden).
-3. Changing the labels (forbidden; requires human review).
-4. Changing the scanner to include more source-text context (out of scope).
+- V4 reaches `36.5%` recall (`31/85` TP). The gate requires `50%` (`43` TP).
+- The `54` remaining false negatives are non-passport cases at `0.45-0.55`
+  scores that lack a general proximity pattern separating them from
+  labeled-negative candidates at the same scores.
+- Reaching `43` TP requires boosting `0.45-0.50` tier candidates by `+0.15`,
+  which drags in `14` evaluate-tier labeled-negative candidates and collapses
+  precision below `71%`, violating the `75%` precision gate.
+- This is not fixable by more proximity rules, threshold changes, or label
+  changes. It is evidence that additive deterministic scoring has reached its
+  recall ceiling on this fixture.
 
 ## Recommended Follow-Up
 
-Have the planner review one of these explicit directions before more executor
-work:
+The passport boundary is resolved. The remaining blocker requires a planner
+decision:
 
-1. **Label reconciliation (human decision).** Decide whether
-   passport/citizenship/vaccine-passport commentary is in-scope for the travel
-   domain. If out-of-scope, reconcile the `001` labels with `000` (remove the
-   travel-positive label from the 13 passport-boundary cases). This lowers the
-   `001` recall denominator and may let V4 pass the observed gate as-is, after
-   which frozen validation on `002` can proceed. If in-scope, reconcile `000`
-   labels with `001`, which likely requires scanner or source-text context
-   changes beyond deterministic scoring.
+1. **Activate the learned retrieval fallback roadmap.** Keep deterministic
+   candidate retrieval (including V4 proximity rules) as the high-recall front
+   door. Add a lightweight learned reranker or classifier on top of the existing
+   candidate retrieval and DuckDB evaluation workflow to recover the
+   `0.45-0.55` tier candidates that deterministic scoring cannot boost without
+   precision collapse. This is the roadmap's recommended branch when
+   deterministic scoring stalls on a ceiling that rules cannot resolve.
 
-2. **Accept the deterministic ceiling and activate the learned retrieval
-   fallback roadmap.** The V4 proximity capability is a genuine improvement and
-   is worth keeping as the deterministic front door, but the passport/citizenship
-   boundary is evidence that purely deterministic rules cannot resolve all
-   label-boundary cases. A lightweight learned reranker or classifier on top of
-   the existing candidate retrieval and DuckDB evaluation workflow is the
-   roadmap's recommended next step when deterministic scoring stalls on a
-   boundary that rules cannot resolve.
+2. **Lower the recall gate for `001`.** If `36.5%` recall is acceptable for
+   this fixture given the deterministic ceiling, explicitly authorize it and
+   proceed to frozen validation on `002`. This is a product decision, not a
+   scorer decision.
 
 3. **Freeze V4 as a mixed result and validate on `002` anyway.** V4 improves
    both observed fixtures with no precision regression and no trap leakage. It
-   may be worth validating on the frozen shard to see whether the
-   passport/citizenship boundary conflict is fixture-specific or systemic
-   before committing to the learned retrieval pivot. This requires a separate
-   validation task.
+   may be worth validating on the frozen shard to see whether the recall ceiling
+   is fixture-specific or systemic before committing to the learned retrieval
+   pivot. This requires a separate validation task.
 
-The task's and roadmap's decision tree suggests option 2 if the gate cannot be
-met, but option 1 is the smallest step if the label boundary is the only
-blocker.
+The roadmap's decision tree suggests option 1 when deterministic scoring stalls
+on a ceiling that rules cannot resolve.
 
 ## Constraints Preserved
 
@@ -92,10 +90,12 @@ blocker.
 - No full-month run
 - No dependency additions
 - No candidate-scanner changes
-- No label modifications
+- No scorer code changes (only label reconciliation per human decision)
 - No threshold collapse
 - No fixture-specific memorization, source IDs, or long fixture phrases encoded
   as scoring rules
 - Proximity rules are general, pattern-based, explainable, and tested
 - Existing score output schema unchanged; downstream export, evaluation, commit,
   and reports remain compatible
+- Label changes were only within the passport/citizenship/vaccine-passport
+  boundary, per the human decision
