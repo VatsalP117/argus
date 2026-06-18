@@ -240,6 +240,139 @@ func TestDeterministicV3CharacterizesObservedTrapAndRecallBehaviors(t *testing.T
 	}
 }
 
+func TestProximityBoostFiresForNearAnchorAndEvidence(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "candidates.parquet")
+	createProximityFixture(t, inputPath)
+
+	cfg := config.RelevanceConfig{
+		Version: "test_proximity",
+		Tiers:   config.RelevanceTiers{A: 0.80, B: 0.60, C: 0.40},
+		Domains: []config.RelevanceDomain{
+			{
+				Name:             "travel",
+				RequiredAnyTerms: []string{"hostel"},
+				GroupWeights: map[string]float64{
+					"travel_language": 0.50,
+				},
+				ProximityRules: []config.ProximityRule{
+					{
+						Name:         "travel_safety_loss",
+						Anchors:      []string{"hostel"},
+						Evidence:     []string{"stolen"},
+						WindowTokens: 8,
+						Weight:       0.20,
+					},
+				},
+			},
+		},
+	}
+
+	outputPath := filepath.Join(dir, "scores.parquet")
+	_, err := Score(context.Background(), Options{
+		InputPath:      inputPath,
+		OutputPath:     outputPath,
+		ScriptPath:     filepath.Join("..", "..", "scripts", "dev", "duckdb_score_candidates.py"),
+		TempDir:        filepath.Join(dir, "duckdb-tmp"),
+		MemoryLimit:    "1GB",
+		Threads:        1,
+		RelevanceRules: cfg,
+	})
+	if err != nil {
+		t.Fatalf("score candidates: %v", err)
+	}
+
+	decisions := readDecisionSummary(t, outputPath)
+
+	near := decisions["hostel-theft-near|travel"]
+	if near.Decision != "retain" {
+		t.Fatalf("expected near hostel+theft to retain via proximity boost, got %+v", near)
+	}
+	if !strings.Contains(near.Reasons, "proximity:travel_safety_loss") {
+		t.Fatalf("expected proximity reason in near case, got %+v", near)
+	}
+
+	far := decisions["hostel-theft-far|travel"]
+	if far.Decision == "retain" {
+		t.Fatalf("expected far-apart hostel+theft to avoid retain, got %+v", far)
+	}
+	if strings.Contains(far.Reasons, "proximity:travel_safety_loss") {
+		t.Fatalf("expected no proximity reason in far case, got %+v", far)
+	}
+
+	generic := decisions["hostel-only|travel"]
+	if generic.Decision == "retain" {
+		t.Fatalf("expected generic hostel mention to avoid retain, got %+v", generic)
+	}
+	if strings.Contains(generic.Reasons, "proximity:travel_safety_loss") {
+		t.Fatalf("expected no proximity reason without evidence, got %+v", generic)
+	}
+}
+
+func TestDeterministicV4RetainsProximityEvidenceWithoutTrapLeakage(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "candidates.parquet")
+	createDeterministicV4Fixture(t, inputPath)
+
+	cfg, err := config.LoadRelevanceConfig(filepath.Join("..", "..", "configs", "relevance", "deterministic-v4.yaml"))
+	if err != nil {
+		t.Fatalf("load v4 config: %v", err)
+	}
+
+	outputPath := filepath.Join(dir, "scores.parquet")
+	_, err = Score(context.Background(), Options{
+		InputPath:      inputPath,
+		OutputPath:     outputPath,
+		ScriptPath:     filepath.Join("..", "..", "scripts", "dev", "duckdb_score_candidates.py"),
+		TempDir:        filepath.Join(dir, "duckdb-tmp"),
+		MemoryLimit:    "1GB",
+		Threads:        1,
+		RelevanceRules: cfg,
+	})
+	if err != nil {
+		t.Fatalf("score candidates: %v", err)
+	}
+
+	decisions := readDecisionSummary(t, outputPath)
+
+	hostelTheft := decisions["hostel-theft-pain|travel"]
+	if hostelTheft.Decision != "retain" {
+		t.Fatalf("expected hostel theft travel safety to retain via proximity, got %+v", hostelTheft)
+	}
+	if !strings.Contains(hostelTheft.Reasons, "proximity:travel_safety_loss") {
+		t.Fatalf("expected proximity:travel_safety_loss reason, got %+v", hostelTheft)
+	}
+
+	borderSecurity := decisions["border-security-pain|travel"]
+	if borderSecurity.Decision != "retain" {
+		t.Fatalf("expected border security travel pain to retain via proximity, got %+v", borderSecurity)
+	}
+	if !strings.Contains(borderSecurity.Reasons, "proximity:travel_border_security") {
+		t.Fatalf("expected proximity:travel_border_security reason, got %+v", borderSecurity)
+	}
+
+	brokenSwitch := decisions["switch-failure-pain|app_opportunity"]
+	if brokenSwitch.Decision != "retain" {
+		t.Fatalf("expected switch failure app pain to retain via proximity, got %+v", brokenSwitch)
+	}
+	if !strings.Contains(brokenSwitch.Reasons, "proximity:app_failure_evidence") {
+		t.Fatalf("expected proximity:app_failure_evidence reason, got %+v", brokenSwitch)
+	}
+
+	genericApp := decisions["generic-app-mention|app_opportunity"]
+	if genericApp.Decision == "retain" {
+		t.Fatalf("expected generic app mention to avoid retain, got %+v", genericApp)
+	}
+	if strings.Contains(genericApp.Reasons, "proximity:app_failure_evidence") {
+		t.Fatalf("expected no proximity reason for generic app mention, got %+v", genericApp)
+	}
+
+	politicalH1b := decisions["political-h1b|travel"]
+	if politicalH1b.Decision == "retain" {
+		t.Fatalf("expected political immigration to avoid retain under v4, got %+v", politicalH1b)
+	}
+}
+
 func createCandidateFixture(t *testing.T, outputPath string) {
 	t.Helper()
 	script := `
@@ -387,5 +520,55 @@ TO ? (FORMAT PARQUET)
 	cmd := exec.Command("python3", "-c", script, outputPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("create deterministic-v3 fixture: %v: %s", err, output)
+	}
+}
+
+func createProximityFixture(t *testing.T, outputPath string) {
+	t.Helper()
+	script := `
+import duckdb
+import sys
+con = duckdb.connect()
+con.execute("""
+COPY (
+    SELECT * FROM (
+        VALUES
+            ('comment', 'hostel-theft-near', 'travel', 'In the hostel my laptop was stolen overnight.', false, false, '["travel_language"]'::JSON, '["hostel"]'::JSON),
+            ('comment', 'hostel-theft-far', 'travel', 'The hostel was clean and the food was great. Later that month I read about stolen phones elsewhere.', false, false, '["travel_language"]'::JSON, '["hostel"]'::JSON),
+            ('comment', 'hostel-only', 'travel', 'I stayed at a hostel in Berlin last summer.', false, false, '["travel_language"]'::JSON, '["hostel"]'::JSON)
+    ) AS t(source_type, source_id, subreddit, candidate_text, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
+)
+TO ? (FORMAT PARQUET)
+""", [sys.argv[1]])
+`
+	cmd := exec.Command("python3", "-c", script, outputPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create proximity fixture: %v: %s", err, output)
+	}
+}
+
+func createDeterministicV4Fixture(t *testing.T, outputPath string) {
+	t.Helper()
+	script := `
+import duckdb
+import sys
+con = duckdb.connect()
+con.execute("""
+COPY (
+    SELECT * FROM (
+        VALUES
+            ('comment', 'hostel-theft-pain', 'travel', 'Guest on Guest theft is common in hostels. People pretending to be guests at the hostel walk out with stolen computers.', false, false, '["travel_language","pain_language"]'::JSON, '["hostel","hostels"]'::JSON),
+            ('comment', 'border-security-pain', 'travel', 'I was asked insane questions by border security trying to enter Australia. The security guard detained and questioned me at customs. I need to know how to avoid this.', false, false, '["travel_language","request_intent"]'::JSON, '["customs","border","immigration"]'::JSON),
+            ('comment', 'switch-failure-pain', 'android', 'The switch does not work at all now. I air gapped it and the app shows an error. It fails to factory reset.', false, false, '["product_and_tool_language","pain_language","workaround_language"]'::JSON, '["app","switch"]'::JSON),
+            ('comment', 'generic-app-mention', 'android', 'I downloaded the app and it installed fine.', false, false, '["product_and_tool_language"]'::JSON, '["app"]'::JSON),
+            ('comment', 'political-h1b', 'politics', 'This is designed to get someone on a H1B visa and Biden will revert immigration rules.', false, false, '["travel_language","pain_language"]'::JSON, '["visa","immigration"]'::JSON)
+    ) AS t(source_type, source_id, subreddit, candidate_text, subreddit_prior_match, is_bot_like, matched_rule_groups, matched_terms)
+)
+TO ? (FORMAT PARQUET)
+""", [sys.argv[1]])
+`
+	cmd := exec.Command("python3", "-c", script, outputPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create deterministic-v4 fixture: %v: %s", err, output)
 	}
 }

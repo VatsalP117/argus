@@ -99,3 +99,102 @@ func TestRelevanceConfigRejectsImpossibleMinimumGroupMatches(t *testing.T) {
 		t.Fatal("expected validation error for impossible minimum group matches")
 	}
 }
+
+func TestLoadRelevanceV4DefinesProximityRules(t *testing.T) {
+	cfg, err := LoadRelevanceConfig("../../configs/relevance/deterministic-v4.yaml")
+	if err != nil {
+		t.Fatalf("load relevance v4 config: %v", err)
+	}
+	if cfg.Version != "deterministic_v4" {
+		t.Fatalf("unexpected version: %s", cfg.Version)
+	}
+
+	totalRules := 0
+	for _, domain := range cfg.Domains {
+		for _, rule := range domain.ProximityRules {
+			totalRules++
+			if rule.Name == "" {
+				t.Fatalf("domain %q has proximity rule without name", domain.Name)
+			}
+			if len(rule.Anchors) == 0 || len(rule.Evidence) == 0 {
+				t.Fatalf("proximity rule %q in domain %q must define anchors and evidence", rule.Name, domain.Name)
+			}
+			if rule.WindowTokens <= 0 || rule.WindowTokens > 50 {
+				t.Fatalf("proximity rule %q window_tokens out of range: %d", rule.Name, rule.WindowTokens)
+			}
+			if rule.Weight <= 0 || rule.Weight > 1 {
+				t.Fatalf("proximity rule %q weight out of range: %f", rule.Name, rule.Weight)
+			}
+		}
+	}
+	if totalRules == 0 {
+		t.Fatal("expected v4 to define at least one proximity rule")
+	}
+}
+
+func TestRelevanceConfigRejectsInvalidProximityRules(t *testing.T) {
+	baseDomain := RelevanceDomain{
+		Name: "travel",
+		GroupWeights: map[string]float64{
+			"travel_language": 0.35,
+		},
+	}
+	validRule := ProximityRule{
+		Name:         "travel_safety",
+		Anchors:      []string{"hostel"},
+		Evidence:     []string{"stolen"},
+		WindowTokens: 12,
+		Weight:       0.20,
+	}
+
+	cases := []struct {
+		name   string
+		mutate func(rule ProximityRule) ProximityRule
+	}{
+		{"missing name", func(r ProximityRule) ProximityRule { r.Name = ""; return r }},
+		{"empty anchors", func(r ProximityRule) ProximityRule { r.Anchors = []string{}; return r }},
+		{"empty evidence", func(r ProximityRule) ProximityRule { r.Evidence = []string{}; return r }},
+		{"zero window", func(r ProximityRule) ProximityRule { r.WindowTokens = 0; return r }},
+		{"window over max", func(r ProximityRule) ProximityRule { r.WindowTokens = 51; return r }},
+		{"zero weight", func(r ProximityRule) ProximityRule { r.Weight = 0; return r }},
+		{"weight over one", func(r ProximityRule) ProximityRule { r.Weight = 1.5; return r }},
+		{"empty anchor term", func(r ProximityRule) ProximityRule { r.Anchors = []string{"hostel", "  "}; return r }},
+		{"duplicate anchor term", func(r ProximityRule) ProximityRule { r.Anchors = []string{"hostel", "hostel"}; return r }},
+		{"duplicate evidence term", func(r ProximityRule) ProximityRule { r.Evidence = []string{"stolen", "stolen"}; return r }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			domain := baseDomain
+			domain.ProximityRules = []ProximityRule{tc.mutate(validRule)}
+			cfg := RelevanceConfig{
+				Version: "test_v4",
+				Tiers:   RelevanceTiers{A: 0.8, B: 0.6, C: 0.4},
+				Domains: []RelevanceDomain{domain},
+			}
+			if err := cfg.Validate(); err == nil {
+				t.Fatalf("expected validation error for %s", tc.name)
+			}
+		})
+	}
+}
+
+func TestRelevanceConfigRejectsDuplicateProximityRuleNames(t *testing.T) {
+	domain := RelevanceDomain{
+		Name: "travel",
+		GroupWeights: map[string]float64{
+			"travel_language": 0.35,
+		},
+		ProximityRules: []ProximityRule{
+			{Name: "duplicate_rule", Anchors: []string{"hostel"}, Evidence: []string{"stolen"}, WindowTokens: 12, Weight: 0.10},
+			{Name: "duplicate_rule", Anchors: []string{"airline"}, Evidence: []string{"lost"}, WindowTokens: 12, Weight: 0.10},
+		},
+	}
+	cfg := RelevanceConfig{
+		Version: "test_v4",
+		Tiers:   RelevanceTiers{A: 0.8, B: 0.6, C: 0.4},
+		Domains: []RelevanceDomain{domain},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for duplicate proximity rule names")
+	}
+}
