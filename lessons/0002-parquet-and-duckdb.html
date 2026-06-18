@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 2: Parquet And DuckDB</title><style>
+:root{--ink:#17211c;--muted:#647268;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}pre{overflow:auto;background:var(--code);border-radius:8px;padding:16px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:var(--good)}.no{color:var(--bad)}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 2: Parquet And DuckDB</h1>
+<p><strong>Skill:</strong> describe how Argus can query large file-backed data without first loading it into an app database.</p>
+<div class="panel"><p>Parquet is columnar: values from the same column are stored together. Analytical questions often need a few columns across many rows, so columnar storage can avoid reading irrelevant fields. DuckDB is the local SQL engine that can query those files directly.</p></div>
+<h2>The One Thing</h2>
+<p>Argus treats files as queryable data sources. DuckDB can read Parquet files directly, including remote files when configured with the right extension. This makes a bounded archive scan feel like SQL over a table, even though the input is a file shard.</p>
+<pre><code>SELECT subreddit, count(*) AS rows
+FROM read_parquet('data/tmp/candidates/*.parquet')
+GROUP BY subreddit
+ORDER BY rows DESC;</code></pre>
+<p>Repo anchors: <code>sql/discovery/validate_hf_duckdb_access.sql</code>, <code>sql/discovery/inspect_archive_schema.sql</code>, and the Python DuckDB adapters in <code>scripts/dev/</code>.</p>
+<h2>Fullstack Bridge</h2>
+<p>Think of DuckDB as an embedded analytical database engine inside the local process, not as a hosted database server. The important unit is often a file path plus SQL, not a network connection plus ORM model.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="c">
+<p>Why is Parquet a good fit for broad scans over Reddit archive rows?</p>
+<button data-choice="a">It stores each row as a JSON document.</button>
+<button data-choice="b">It requires a running database server.</button>
+<button data-choice="c">It is columnar, compressed, and friendly to analytical scans over selected fields.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="https://duckdb.org/docs/current/data/parquet/overview.html">DuckDB Parquet docs</a>, <a href="https://parquet.apache.org/docs/">Apache Parquet docs</a>, and <a href="../reference/duckdb-sql-cheatsheet.html">DuckDB SQL cheatsheet</a>.</p>
+<p>Ask the agent: "Run a safe schema inspection query for one local Parquet file."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: Argus benefits from reading only the columns needed for a scan.':'Not quite. The key property here is columnar analytical access, not row-document storage or a server.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

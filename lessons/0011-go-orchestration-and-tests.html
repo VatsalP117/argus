@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 11: Go Orchestration And Tests</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 11: Go Orchestration And Tests</h1>
+<p><strong>Skill:</strong> read Argus Go commands as pipeline orchestration, not classic web-server code.</p>
+<div class="panel"><p>The Go code mostly owns command-line contracts, config loading, validation, orchestration, JSON outputs, and testable wrappers. Heavy table work is often delegated to DuckDB through Python adapter scripts.</p></div>
+<h2>The One Thing</h2>
+<p>When you open a command under <code>cmd/</code>, look for the pipeline contract: required flags, default config paths, artifact paths, validation before work, adapter call, checkpoint/write behavior, and JSON result shape.</p>
+<p>Repo anchors: <code>cmd/scan-candidates/main.go</code>, <code>internal/candidate/scanner.go</code>, <code>internal/relevance/scorer.go</code>, <code>internal/database/admin.go</code>.</p>
+<h2>Testing Pattern</h2>
+<p>Tests often build small fixtures, run the Go wrapper or adapter, assert JSON/counts/files, then rerun to verify idempotency or failure behavior. This is closer to integration testing than isolated handler testing.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="a">
+<p>What should you inspect first when debugging a failing Argus command?</p>
+<button data-choice="a">Its flags, config paths, artifact paths, validation checks, and checkpoint/output contract.</button>
+<button data-choice="b">Only the frontend route that launched it.</button>
+<button data-choice="c">Only CPU usage.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="../reference/safety-checklist.html">Safety checklist</a>.</p>
+<p>Ask the agent: "Pair with me through cmd/scan-candidates/main.go line by line."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: Argus commands are artifact contracts wrapped in Go.':'Not quite. Start with the command contract and artifacts, then follow the adapter.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Argus Data Engineering Glossary</title>
+  <style>
+    :root { --ink:#19231f; --muted:#5d6b63; --paper:#fbfaf5; --line:#d9d4c5; --accent:#0f766e; --warm:#b45309; }
+    body { margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:linear-gradient(180deg,#f6f4ec,var(--paper)); }
+    main { max-width:980px; margin:0 auto; padding:48px 24px 72px; }
+    h1 { font-size:42px; margin:0 0 8px; letter-spacing:0; }
+    p { line-height:1.6; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:28px; }
+    article { border:1px solid var(--line); background:#fffdf7; border-radius:8px; padding:18px; }
+    h2 { font-size:18px; margin:0 0 8px; color:var(--accent); }
+    code { background:#eee8d8; padding:2px 5px; border-radius:4px; }
+    @media print { body { background:white; } article { break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Argus Data Engineering Glossary</h1>
+  <p>This is the compact vocabulary map for onboarding. When a lesson uses one of these terms, this is the meaning to keep in mind inside Argus.</p>
+  <section class="grid">
+    <article><h2>Archive</h2><p>The remote, recoverable upstream source. In Argus this is historical Reddit data exposed as versioned Parquet shards.</p></article>
+    <article><h2>Parquet</h2><p>A compressed columnar file format. Argus uses it for remote archive reads and temporary local staging because analytical queries often need only selected columns.</p></article>
+    <article><h2>DuckDB</h2><p>An embedded analytical SQL engine. Argus uses it locally for remote Parquet scans, local transformations, validation SQL, and the durable research corpus.</p></article>
+    <article><h2>Manifest</h2><p>A reproducible work order that pins exact source shards, revisions, identities, and byte sizes. It is the data-pipeline version of "here is the exact input set."</p></article>
+    <article><h2>Checkpoint</h2><p>A durable record that a work unit ran with a specific input, config hash, output path, and checksum. It makes retries safe and explainable.</p></article>
+    <article><h2>Staging</h2><p>Temporary files produced while processing. Argus staging may be deleted only after durable commit, validation, reconciliation, and cleanup audit.</p></article>
+    <article><h2>Durable Corpus</h2><p>The long-lived local research database, currently <code>data/argus.duckdb</code>. It stores retained evidence and operational metadata.</p></article>
+    <article><h2>Lineage</h2><p>The ability to trace a row back to its origin: archive repo, revision, source file, manifest, batch, and source URL.</p></article>
+    <article><h2>Reconciliation</h2><p>Row-count accounting that proves inputs, rejected rows, retained rows, and quarantined rows add up as expected.</p></article>
+    <article><h2>Mart</h2><p>A curated analytical table or view shaped for research questions, such as pain points by subreddit or signal summaries.</p></article>
+    <article><h2>Relevance Tier</h2><p>A scored bucket for whether a candidate is retained, reviewed, evaluated, or discarded. Argus uses A/B/C/D-style thresholds.</p></article>
+    <article><h2>Quality Gate</h2><p>A measurable condition that must pass before widening scope, such as retained precision above the configured threshold.</p></article>
+  </section>
+</main>
+</body>
+</html>

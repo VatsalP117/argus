@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 7: Validation And Reconciliation</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}pre{overflow:auto;background:var(--code);border-radius:8px;padding:16px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 7: Validation And Reconciliation</h1>
+<p><strong>Skill:</strong> explain the row-count equations that protect Argus from losing data silently.</p>
+<div class="panel"><p>Validation asks "does this data satisfy the rules?" Reconciliation asks "can every row be accounted for?" Argus needs both before it trusts a batch or deletes staging.</p></div>
+<h2>The One Thing</h2>
+<pre><code>rows_seen = rows_rejected_early + rows_staged
+rows_staged = rows_retained + rows_rejected_late + rows_quarantined</code></pre>
+<p>If either equation fails, Argus does not know where some rows went. That is a stop sign.</p>
+<p>Repo anchors: <code>sql/checks/phase-*.sql</code>, <code>batch_reconciliation</code> in <code>sql/migrations/001_initial_durable_schema.sql</code>, <code>internal/candidate/committer_test.go</code>.</p>
+<h2>Fullstack Bridge</h2>
+<p>Unit tests prove code behavior. Data validation proves data state. Reconciliation is the accounting layer between the two.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="b">
+<p>A batch saw 100 rows, rejected 30 early, and staged 65. What should you conclude?</p>
+<button data-choice="a">Everything is fine because most rows were handled.</button>
+<button data-choice="b">The source equation fails because 30 + 65 does not equal 100.</button>
+<button data-choice="c">The relevance scorer should be retrained.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="https://greatexpectations.io/">GX Core</a>, <a href="https://docs.greatexpectations.io/docs/0.18/reference/learn/terms/data_docs/">GX Data Docs</a>, and <a href="../reference/safety-checklist.html">safety checklist</a>.</p>
+<p>Ask the agent: "Find one Argus test that asserts reconciliation behavior."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: 5 rows are unaccounted for.':'Not quite. Reconciliation demands exact accounting, not vibes.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

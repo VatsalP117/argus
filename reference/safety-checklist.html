@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Argus Pipeline Safety Checklist</title>
+  <style>
+    :root { --ink:#18221d; --paper:#fbfaf4; --line:#d8d2c3; --accent:#0f766e; --warn:#b45309; }
+    body { margin:0; font-family: Georgia, "Times New Roman", serif; background:var(--paper); color:var(--ink); }
+    main { max-width:940px; margin:0 auto; padding:44px 24px 72px; }
+    h1 { font-size:40px; margin:0 0 10px; }
+    ol { display:grid; gap:12px; padding-left:24px; }
+    li { background:#fffdf7; border:1px solid var(--line); border-radius:8px; padding:14px 16px; line-height:1.5; }
+    strong { color:var(--accent); }
+    .stop { color:var(--warn); font-weight:bold; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Argus Pipeline Safety Checklist</h1>
+  <p>Use this before deleting staging, widening ingestion, or trusting a research result.</p>
+  <ol>
+    <li><strong>Source pinned:</strong> archive repo, revision, source path, and source identity are recorded.</li>
+    <li><strong>Manifest stable:</strong> the manifest ID and checksum match the work being run.</li>
+    <li><strong>Config versioned:</strong> candidate, relevance, storage, and pipeline configs are known and checksummed where needed.</li>
+    <li><strong>Checkpoint valid:</strong> retries reuse only matching input, config hash, output path, and output checksum.</li>
+    <li><strong>Original text preserved:</strong> retained rows keep the source text and a direct source URL.</li>
+    <li><strong>Rows reconcile:</strong> source and staging equations both evaluate true.</li>
+    <li><strong>Durable commit validated:</strong> retained documents, relevance rows, signals, and entities match expected counts.</li>
+    <li><strong>Quality gates pass:</strong> relevance precision/recall and false-positive checks are acceptable for the next scope.</li>
+    <li><strong>Cleanup audited:</strong> every deleted staging file has a cleanup event and checksum verification.</li>
+    <li><span class="stop">Stop if unsure:</span> if any artifact cannot explain where data came from or where rows went, do not widen scope.</li>
+  </ol>
+</main>
+</body>
+</html>

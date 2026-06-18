@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 8: Candidate Scan And Relevance</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 8: Candidate Scan And Relevance</h1>
+<p><strong>Skill:</strong> explain why Argus first scans broadly, then scores and gates.</p>
+<div class="panel"><p>Argus cannot keep every Reddit row. It also cannot miss too many good rows. So it uses a high-recall candidate scan first, then relevance scoring and evaluation to decide what is safe to retain.</p></div>
+<h2>The One Thing</h2>
+<p>Candidate rules answer: "Could this row matter?" Relevance rules answer: "How much does this row matter for a domain?" The first should be broad enough not to miss useful evidence; the second should be calibrated enough not to pollute the durable corpus.</p>
+<p>Repo anchors: <code>configs/candidates/broad-v1.yaml</code>, <code>configs/relevance/deterministic-v3.yaml</code>, <code>cmd/scan-candidates</code>, <code>cmd/score-candidates</code>.</p>
+<h2>Tiers</h2>
+<p>In <code>deterministic-v3</code>, scores map roughly to A/B/C/D tiers. A and B are retained candidates, C is evaluation pool, and D is discarded after metrics are recorded.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="a">
+<p>Why should the first scan optimize for high recall?</p>
+<button data-choice="a">Because missed source rows cannot be recovered later unless the archive shard is rescanned.</button>
+<button data-choice="b">Because high recall always means high precision.</button>
+<button data-choice="c">Because the durable database has unlimited storage.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="../reference/safety-checklist.html">Safety checklist</a>.</p>
+<p>Ask the agent: "Compare broad-v1 candidate rules with deterministic-v3 relevance rules."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: broad scan protects against missing useful evidence.':'Not quite. Recall is about catching relevant rows, not proving they are all good.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

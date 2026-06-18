@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 4: Batches, Checkpoints, Idempotency</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}code{background:var(--code);padding:2px 5px;border-radius:4px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 4: Batches, Checkpoints, Idempotency</h1>
+<p><strong>Skill:</strong> identify whether rerunning a data command is safe.</p>
+<div class="panel"><p>Argus processes bounded work units. A batch might be one manifest entry, one shard, or one staged output. A checkpoint records enough information to know whether a rerun is the same work or a dangerous mismatch.</p></div>
+<h2>The One Thing</h2>
+<p>Idempotency means "running the same command again should not corrupt or duplicate the result." In Argus, this is enforced with checkpoint reuse, config hashes, source identity checks, output checksums, and explicit statuses like <code>skipped_existing</code>.</p>
+<p>Repo anchors: <code>cmd/scan-candidates/main.go</code>, <code>internal/candidate/checkpoint.go</code>, <code>state/checkpoints/</code>.</p>
+<h2>Fullstack Bridge</h2>
+<p>A normal API endpoint might use an idempotency key to prevent duplicate payments. A data pipeline uses checkpoints and checksums to prevent duplicate or mismatched processing.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="b">
+<p>A previous scan checkpoint exists, but the candidate config hash changed. What should happen?</p>
+<button data-choice="a">Silently reuse the checkpoint because the entry ID is the same.</button>
+<button data-choice="b">Reject reuse because the output no longer proves it came from the same rules.</button>
+<button data-choice="c">Delete all durable data immediately.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="../reference/safety-checklist.html">Pipeline safety checklist</a>.</p>
+<p>Ask the agent: "Show me the scan checkpoint reuse checks in code."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: same input plus different rules is different work.':'Not quite. Checkpoint reuse is only safe when input, config, and output identity all match.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>

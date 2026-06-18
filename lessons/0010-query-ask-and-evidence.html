@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 10: Query, Ask, Evidence</title><style>
+:root{--ink:#17211c;--paper:#fbfaf4;--line:#d8d2c3;--accent:#0f766e;--code:#eee8d8;--bad:#b91c1c;--good:#0f766e}body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{max-width:920px;margin:0 auto;padding:46px 24px 78px}h1{font-size:42px;margin:0 0 8px}h2{margin-top:30px;color:var(--accent)}p,li{line-height:1.6}.panel{border:1px solid var(--line);background:#fffdf7;border-radius:8px;padding:18px;margin:18px 0}pre{overflow:auto;background:var(--code);border-radius:8px;padding:16px}.quiz button{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf7;font:inherit}.result{font-weight:bold}.ok{color:#0f766e}.no{color:#b91c1c}a{color:var(--accent)}</style></head>
+<body><main>
+<h1>Lesson 10: Query, Ask, Evidence</h1>
+<p><strong>Skill:</strong> explain how Argus keeps analyst and LLM answers evidence-backed.</p>
+<div class="panel"><p>The query layer is intentionally guarded. Users and LLMs should not free-roam raw storage; they query curated views and return evidence rows that can be inspected.</p></div>
+<h2>The One Thing</h2>
+<p>Argus answers should be traceable. A useful answer is not "the model thinks visas are painful." A useful answer is "these recurring visa pain points appear in retained documents, with source URLs, snippets, and run metadata."</p>
+<pre><code>go run ./cmd/query \
+  --query-name signal_summary \
+  --signal-type pain_point \
+  --limit 10</code></pre>
+<p>Repo anchors: <code>cmd/query</code>, <code>cmd/ask</code>, <code>docs/runbooks/phase-6-query-layer.md</code>, <code>docs/runbooks/phase-6-llm-ask.md</code>.</p>
+<h2>LLM Boundary</h2>
+<p>The LLM plans retrieval and synthesizes from retrieved rows. The durable guarantee still comes from local data, guarded query names, evidence document IDs, and saved ask runs.</p>
+<h2>Quick Check</h2>
+<div class="quiz" data-answer="b">
+<p>What makes an Argus answer trustworthy?</p>
+<button data-choice="a">It sounds fluent and confident.</button>
+<button data-choice="b">It is grounded in retrieved evidence rows with source traceability.</button>
+<button data-choice="c">It was generated without SQL.</button>
+<p class="result"></p>
+</div>
+<h2>Read Next</h2>
+<p><a href="../reference/pipeline-map.html">Pipeline map</a>.</p>
+<p>Ask the agent: "Show me the guarded views exposed by cmd/query."</p>
+<script>document.querySelectorAll('.quiz button').forEach(b=>b.onclick=()=>{const q=b.closest('.quiz');const ok=b.dataset.choice===q.dataset.answer;q.querySelector('.result').textContent=ok?'Correct: evidence and traceability are the trust mechanism.':'Not quite. Fluency is not evidence; retrieved source rows are.';q.querySelector('.result').className='result '+(ok?'ok':'no')})</script>
+</main></body></html>
