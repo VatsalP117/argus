@@ -1,0 +1,326 @@
+version: deterministic_v4
+
+tiers:
+  a: 0.80
+  b: 0.60
+  c: 0.40
+
+domains:
+  - name: travel
+    subreddit_prior_weight: 0.10
+    required_any_terms:
+      - visa
+      - embassy
+      - consulate
+      - passport
+      - itinerary
+      - airline
+      - booking
+      - reservation
+      - hostel
+      - hostels
+      - luggage
+      - customs
+      - immigration
+      - layover
+      - travel insurance
+      - roaming
+      - esim
+    group_weights:
+      travel_language: 0.35
+      pain_language: 0.15
+      request_intent: 0.20
+      workaround_language: 0.15
+      pricing_and_payment: 0.05
+      comparison_and_dissatisfaction: 0.05
+    context_weights:
+      work visa: 0.35
+      visa requirements: 0.35
+      visa rules: 0.30
+      schengen visa: 0.35
+      sponsorship: 0.25
+      passport: 0.20
+      travel document: 0.40
+      airport immigration: 0.30
+      clear customs: 0.30
+      customs clearance: 0.30
+      customs inspection: 0.30
+      not letting me through: 0.25
+      itinerary: 0.17
+      trip: 0.14
+      traveling: 0.22
+      travelling: 0.20
+      hostel: 0.24
+      hostels: 0.24
+      airline: 0.10
+      flight: 0.10
+      migrate: 0.25
+      residency: 0.25
+      asylum: 0.25
+      undocumented: 0.15
+      immigration expert: 0.25
+      immigration detention: 0.25
+      opens for immigration: 0.20
+      express entry: 0.25
+      same day permit: 0.27
+      backpacking: 0.27
+      booking.com: 0.30
+      airport: 0.15
+      plane: 0.10
+      port of entry: 0.15
+      embassy appointment: 0.35
+      canceled everything: 0.15
+      dispute to your airline: 0.15
+      services not provided: 0.15
+    context_penalty_weights:
+      visa card: 0.80
+      mastercard: 0.80
+      gift card: 0.80
+      prepaid visa: 0.80
+      credit card: 0.50
+      debit card: 0.50
+      payment processor: 0.70
+      onlyfans: 0.90
+      customs available: 0.90
+      custom video: 0.90
+      tarkov: 0.80
+      customs map: 0.80
+      illegal immigration: 0.35
+      mass immigration: 0.45
+      anti immigration: 0.45
+      immigration is: 0.25
+      reservation life: 0.60
+      roaming idiot: 0.80
+      passport to pain: 0.80
+      booking classes: 0.50
+      airline calls: 0.80
+      airline industry: 0.35
+      average price: 0.25
+      blue passport: 0.35
+      deportation: 0.35
+      doesn't need a passport: 0.25
+      government issued id: 0.20
+      h1b visa: 0.08
+      h1b: 0.22
+      immigration process: 0.30
+      immigration reform: 0.13
+      inflation-adjusted: 0.30
+      passport or not: 0.25
+      passport to go anywhere: 0.30
+    proximity_rules:
+      - name: travel_safety_loss
+        anchors:
+          - hostel
+          - hostels
+          - hotel
+          - airline
+          - luggage
+          - baggage
+          - flight
+        evidence:
+          - stolen
+          - theft
+          - robbed
+          - lost
+          - missing
+          - disappeared
+        window_tokens: 12
+        weight: 0.08
+      - name: travel_border_security
+        anchors:
+          - customs
+          - border
+          - immigration
+        evidence:
+          - evading
+          - vetted
+          - questioned
+          - rogue
+          - detained
+          - inspected
+          - searched
+          - security
+        window_tokens: 12
+        weight: 0.08
+
+  - name: saas_opportunity
+    subreddit_prior_weight: 0.05
+    required_any_groups:
+      - business_workflow_language
+      - product_and_tool_language
+    group_weights:
+      business_workflow_language: 0.25
+      product_and_tool_language: 0.15
+      request_intent: 0.35
+      workaround_language: 0.25
+      pain_language: 0.15
+      pricing_and_payment: 0.10
+      comparison_and_dissatisfaction: 0.10
+    context_weights:
+      no way to do it faster: 0.25
+      self-report: 0.25
+      commission: 0.20
+      asc 606: 0.20
+      collections: 0.05
+      unpaid overtime: 0.25
+      7 day weeks: 0.25
+      junk code: 0.15
+      went out of business: 0.25
+      legal action: 0.20
+      software fees: 0.30
+      subscription services: 0.25
+      booking rates: 0.25
+      conversion rate: 0.25
+      trying to get an appointment: 0.23
+      for months: 0.23
+      aren't reporting: 0.20
+      what a mess: 0.20
+      computer software: 0.15
+      machine learning: 0.10
+      old software: 0.05
+    context_penalty_weights:
+      onlyfans: 0.90
+      subscribe: 0.40
+      affiliate: 0.40
+      i am a bot: 0.90
+      performed automatically: 0.90
+      referral code: 0.60
+      bonus money: 0.60
+      free bitcoin: 0.70
+      promo code: 0.60
+      discount code: 0.60
+      health insurance: 0.15
+      dental insurance: 0.15
+
+  - name: app_opportunity
+    subreddit_prior_weight: 0.05
+    required_any_groups:
+      - product_and_tool_language
+    group_weights:
+      product_and_tool_language: 0.20
+      request_intent: 0.35
+      workaround_language: 0.25
+      pain_language: 0.15
+      comparison_and_dissatisfaction: 0.10
+      pricing_and_payment: 0.10
+      business_workflow_language: 0.05
+      travel_language: 0.05
+    context_weights:
+      bug: 0.25
+      glitch: 0.25
+      does not work: 0.25
+      doesn't work: 0.25
+      dont work: 0.25
+      not user friendly: 0.30
+      laggy: 0.20
+      workaround: 0.15
+      wish there was: 0.25
+      impossible to speak: 0.20
+      missed out: 0.20
+      hidden: 0.15
+      hard to go back: 0.23
+      can't get: 0.20
+      cant get: 0.20
+      can't stream: 0.25
+      cant stream: 0.25
+      can't create: 0.20
+      cant create: 0.20
+      complete trash: 0.25
+      mouse mode: 0.20
+      back yourself up: 0.25
+      take a picture: 0.20
+      inventory runs out: 0.23
+      still shows: 0.20
+      canceled: 0.15
+      cancelled: 0.15
+      should still be active: 0.15
+      when it comes in stock: 0.20
+      never going back: 0.20
+      doesnt even load: 0.25
+      doesn't even load: 0.25
+      sync everything instead: 0.20
+      spend a lifetime: 0.23
+      make all the plugins work: 0.23
+      playback menu: 0.25
+      external monitors: 0.25
+      restart the phone: 0.20
+      controller: 0.10
+      link cable: 0.25
+      installed: 0.15
+      compatibility: 0.10
+      load order: 0.10
+      loading screens: 0.30
+      manually: 0.20
+      old version: 0.10
+      sync button: 0.10
+      web browser: 0.15
+      crashes: 0.25
+      camera issues: 0.10
+    context_penalty_weights:
+      onlyfans: 0.90
+      subscribe: 0.40
+      i am a bot: 0.90
+      performed automatically: 0.90
+      referral code: 0.60
+      bonus money: 0.60
+      free bitcoin: 0.70
+      delete then reinstall: 0.18
+      does not work for everyone: 0.20
+      government doesn't work: 0.35
+      hard to setup: 0.15
+      reinstall the app: 0.18
+      reviews i see: 0.15
+      shitty apps: 0.20
+    proximity_rules:
+      - name: app_failure_evidence
+        anchors:
+          - app
+          - software
+          - plugin
+          - plugins
+          - browser
+          - firmware
+          - switch
+          - switches
+          - controller
+          - phone
+        evidence:
+          - does not work
+          - doesn't work
+          - doesnt work
+          - not work
+          - crashes
+          - broken
+          - glitch
+          - bug
+          - error
+          - workaround
+          - reinstall
+          - air gapped
+          - fail
+          - fails
+          - wont work
+          - compatibility
+          - impossible
+        window_tokens: 12
+        weight: 0.08
+
+signal_mappings:
+  - rule_group: pain_language
+    signal_type: pain_point
+    score: 0.70
+  - rule_group: request_intent
+    signal_type: feature_request
+    score: 0.80
+  - rule_group: workaround_language
+    signal_type: workaround
+    score: 0.75
+  - rule_group: comparison_and_dissatisfaction
+    signal_type: competitor_dissatisfaction
+    score: 0.65
+  - rule_group: pricing_and_payment
+    signal_type: willingness_to_pay
+    score: 0.65
+  - rule_group: business_workflow_language
+    signal_type: workflow_fragmentation
+    score: 0.60

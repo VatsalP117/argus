@@ -14,8 +14,16 @@ type RelevanceTiers struct {
 	C float64 `yaml:"c" json:"c"`
 }
 
+type ProximityRule struct {
+	Name         string   `yaml:"name" json:"name"`
+	Anchors      []string `yaml:"anchors" json:"anchors"`
+	Evidence     []string `yaml:"evidence" json:"evidence"`
+	WindowTokens int      `yaml:"window_tokens" json:"window_tokens"`
+	Weight       float64  `yaml:"weight" json:"weight"`
+}
+
 type RelevanceDomain struct {
-	Name                  string             `yaml:"name" json:"name"`
+	Name                  string           `yaml:"name" json:"name"`
 	GroupWeights          map[string]float64 `yaml:"group_weights" json:"group_weights"`
 	ContextWeights        map[string]float64 `yaml:"context_weights" json:"context_weights"`
 	ContextPenaltyWeights map[string]float64 `yaml:"context_penalty_weights" json:"context_penalty_weights"`
@@ -23,6 +31,7 @@ type RelevanceDomain struct {
 	RequiredAnyGroups     []string           `yaml:"required_any_groups" json:"required_any_groups"`
 	MinimumGroupMatches   int                `yaml:"minimum_group_matches" json:"minimum_group_matches"`
 	SubredditPriorWeight  float64            `yaml:"subreddit_prior_weight" json:"subreddit_prior_weight"`
+	ProximityRules        []ProximityRule    `yaml:"proximity_rules" json:"proximity_rules"`
 }
 
 type SignalMapping struct {
@@ -132,6 +141,9 @@ func (cfg RelevanceConfig) Validate() error {
 			}
 			requiredGroups[normalized] = struct{}{}
 		}
+		if err := validateProximityRules(name, domain.ProximityRules); err != nil {
+			return err
+		}
 	}
 
 	mappings := map[string]struct{}{}
@@ -169,6 +181,73 @@ func validateRelevanceTermWeights(domain, kind string, weights map[string]float6
 				term,
 			)
 		}
+	}
+	return nil
+}
+
+func validateProximityRules(domain string, rules []ProximityRule) error {
+	names := map[string]struct{}{}
+	for _, rule := range rules {
+		name := strings.TrimSpace(rule.Name)
+		if name == "" {
+			return fmt.Errorf("relevance domain %q contains a proximity rule without a name", domain)
+		}
+		if _, exists := names[name]; exists {
+			return fmt.Errorf("relevance domain %q contains duplicate proximity rule %q", domain, name)
+		}
+		names[name] = struct{}{}
+		if len(rule.Anchors) == 0 {
+			return fmt.Errorf("relevance domain %q proximity rule %q must define anchors", domain, name)
+		}
+		if len(rule.Evidence) == 0 {
+			return fmt.Errorf("relevance domain %q proximity rule %q must define evidence", domain, name)
+		}
+		if err := validateProximityTerms(domain, name, "anchor", rule.Anchors); err != nil {
+			return err
+		}
+		if err := validateProximityTerms(domain, name, "evidence", rule.Evidence); err != nil {
+			return err
+		}
+		if rule.WindowTokens <= 0 || rule.WindowTokens > 50 {
+			return fmt.Errorf(
+				"relevance domain %q proximity rule %q window_tokens must be within [1, 50]",
+				domain,
+				name,
+			)
+		}
+		if rule.Weight <= 0 || rule.Weight > 1 {
+			return fmt.Errorf(
+				"relevance domain %q proximity rule %q weight must be within (0, 1]",
+				domain,
+				name,
+			)
+		}
+	}
+	return nil
+}
+
+func validateProximityTerms(domain, ruleName, kind string, terms []string) error {
+	seen := map[string]struct{}{}
+	for _, term := range terms {
+		normalized := strings.ToLower(strings.TrimSpace(term))
+		if normalized == "" {
+			return fmt.Errorf(
+				"relevance domain %q proximity rule %q contains an empty %s term",
+				domain,
+				ruleName,
+				kind,
+			)
+		}
+		if _, exists := seen[normalized]; exists {
+			return fmt.Errorf(
+				"relevance domain %q proximity rule %q contains duplicate %s term %q",
+				domain,
+				ruleName,
+				kind,
+				term,
+			)
+		}
+		seen[normalized] = struct{}{}
 	}
 	return nil
 }

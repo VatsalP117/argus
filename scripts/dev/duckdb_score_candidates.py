@@ -6,6 +6,87 @@ import sys
 from pathlib import Path
 
 
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+
+def _tokenize(text):
+    return _TOKEN_RE.findall((text or "").lower())
+
+
+def _term_positions(tokens, term):
+    term_tokens = _TOKEN_RE.findall(term.lower())
+    if not term_tokens or not tokens:
+        return []
+    positions = []
+    n = len(term_tokens)
+    for i in range(len(tokens) - n + 1):
+        if tokens[i:i + n] == term_tokens:
+            positions.append(i)
+    return positions
+
+
+def _proximity_match(text, rules):
+    if not rules:
+        return 0.0, []
+    tokens = _tokenize(text)
+    if not tokens:
+        return 0.0, []
+    total_boost = 0.0
+    reasons = []
+    for rule in rules:
+        anchor_positions = []
+        for anchor in rule.get("anchors", []):
+            anchor_positions.extend(_term_positions(tokens, anchor))
+        if not anchor_positions:
+            continue
+        evidence_positions = []
+        for evidence in rule.get("evidence", []):
+            evidence_positions.extend(_term_positions(tokens, evidence))
+        if not evidence_positions:
+            continue
+        window = int(rule.get("window_tokens", 0))
+        if any(abs(a - e) <= window for a in anchor_positions for e in evidence_positions):
+            total_boost += float(rule.get("weight", 0.0))
+            reasons.append("proximity:" + rule["name"])
+    return total_boost, reasons
+
+
+def make_proximity_rule_udf(rule):
+    weight = float(rule.get("weight", 0.0))
+    anchors = list(rule.get("anchors", []))
+    evidence = list(rule.get("evidence", []))
+    window = int(rule.get("window_tokens", 0))
+    rule_name = rule.get("name", "")
+
+    def _udf(text):
+        boost, _ = _proximity_match(
+            text,
+            [{
+                "name": rule_name,
+                "anchors": anchors,
+                "evidence": evidence,
+                "window_tokens": window,
+                "weight": weight,
+            }],
+        )
+        return weight if boost > 0 else 0.0
+
+    return _udf
+
+
+def register_proximity_udfs(con, rules):
+    for domain_index, domain in enumerate(rules["domains"]):
+        for rule_index, rule in enumerate(domain.get("proximity_rules") or []):
+            name = rule["name"]
+            func = make_proximity_rule_udf(rule)
+            con.create_function(
+                f"proximity_{domain_index}_{rule_index}",
+                func,
+                ["VARCHAR"],
+                "DOUBLE",
+            )
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-path", required=True)
@@ -37,7 +118,7 @@ def text_match(term: str):
     return f"contains(candidate_match_text, {sql_string(normalized)})"
 
 
-def build_domain_query(domain: dict):
+def build_domain_query(domain: dict, domain_index: int):
     score_parts = []
     penalty_parts = []
     reason_parts = []
@@ -61,6 +142,16 @@ def build_domain_query(domain: dict):
         penalty_parts.append(f"CASE WHEN {matches} THEN {float(weight)} ELSE 0 END")
         reason_parts.append(
             f"CASE WHEN {matches} THEN {sql_string('penalty:' + term)} "
+            "ELSE NULL::VARCHAR END"
+        )
+
+    proximity_rules = domain.get("proximity_rules") or []
+    for rule_index, rule in enumerate(proximity_rules):
+        udf_name = f"proximity_{domain_index}_{rule_index}"
+        score_parts.append(f"{udf_name}(candidate_match_text)")
+        reason_parts.append(
+            f"CASE WHEN {udf_name}(candidate_match_text) > 0 "
+            f"THEN {sql_string('proximity:' + rule['name'])} "
             "ELSE NULL::VARCHAR END"
         )
 
@@ -165,7 +256,11 @@ def score(args, rules):
         rows_candidates = int(
             con.execute("SELECT count(*) FROM candidate_source").fetchone()[0]
         )
-        domain_queries = [build_domain_query(domain) for domain in rules["domains"]]
+        register_proximity_udfs(con, rules)
+        domain_queries = [
+            build_domain_query(domain, domain_index)
+            for domain_index, domain in enumerate(rules["domains"])
+        ]
         union_query = "\nUNION ALL\n".join(domain_queries)
         tiers = rules["tiers"]
 
