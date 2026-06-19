@@ -429,10 +429,34 @@ Initial decision tiers:
 
 - `A`: score `>= 0.80`, retain with full enrichment
 - `B`: score `0.60-0.79`, retain and review/sample
-- `C`: score `0.40-0.59`, temporary evaluation pool
+- `C`: score `0.40-0.59`, review/exploration evidence, stored only with explicit opt-in and not trusted by default
 - `D`: score `< 0.40`, discard after metrics are recorded
 
 Thresholds are provisional and must be calibrated from labelled data.
+
+### Tiered retention and trust policy (approved 2026-06-18)
+
+Argus uses tiered retention rather than a strict binary truth filter. The four
+tiers map to three retention decisions:
+
+- `A` and `B` -> `decision = retain` -> trusted evidence
+- `C` -> `decision = evaluate` -> review/exploration evidence, opt-in only
+- `D` -> `decision = discard` -> never retained
+
+Defaults:
+
+- Durable commit commits only `A`/`B` by default. `C` is committed only behind
+  an explicit `--include-review-tier` opt-in, as a review/exploration pool.
+- Default research/query behavior uses `A`/`B` only. Exploratory or review
+  workflows may explicitly opt into `C`.
+- `C` rows preserve `relevance_tier = 'C'`, `decision = 'evaluate'`, and
+  `decision_reasons` so they are never silently treated as trusted evidence.
+
+The trusted-tier quality gates (retained precision, retained recall, zero
+payment-brand Visa false positives, zero promotion/bot false positives,
+lexical-ambiguity share) measure `decision = retain` rows. They are not lowered.
+`C` is not judged by the trusted-tier gate; it exists for recall recovery,
+manual review, and future training data.
 
 ### Stage D: Context expansion
 

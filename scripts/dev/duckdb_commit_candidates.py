@@ -92,6 +92,7 @@ def existing_result(
     score_bytes,
     relevance_version,
     relevance_config_hash,
+    include_review_tier,
 ):
     batch = con.execute(
         """
@@ -120,6 +121,27 @@ def existing_result(
         relevance_version,
         relevance_config_hash,
     )
+
+    requested_predicate = (
+        "decision IN ('retain', 'evaluate')"
+        if include_review_tier
+        else "decision = 'retain'"
+    )
+    requested_retained_rows = con.execute(
+        f"""
+        SELECT count(DISTINCT (source_type, source_id))
+        FROM read_parquet({sql_string(str(score_path))})
+        WHERE {requested_predicate}
+        """
+    ).fetchone()[0]
+    if requested_retained_rows != batch[2]:
+        raise ValueError(
+            f"ingest batch {ingest_batch_id} was already committed with a "
+            f"different retention scope (stored retained_rows={batch[2]}, "
+            f"requested scope would retain={requested_retained_rows}); "
+            f"--include-review-tier cannot extend an existing batch, drop the "
+            f"batch or use a fresh manifest entry"
+        )
 
     reconciliation = con.execute(
         """
@@ -159,6 +181,21 @@ def existing_result(
         """,
         [ingest_batch_id],
     ).fetchone()[0]
+    rows_review_tier = con.execute(
+        """
+        SELECT count(*)
+        FROM (
+            SELECT documents.document_id
+            FROM documents documents
+            JOIN document_relevance relevance USING (document_id)
+            WHERE documents.ingest_batch_id = ?
+            GROUP BY documents.document_id
+            HAVING bool_or(relevance.decision = 'evaluate')
+               AND NOT bool_or(relevance.decision = 'retain')
+        )
+        """,
+        [ingest_batch_id],
+    ).fetchone()[0]
 
     return {
         "status": "skipped_existing",
@@ -174,6 +211,7 @@ def existing_result(
         "relevance_rows": relevance_rows,
         "signals_written": signals_written,
         "entities_written": entities_written,
+        "rows_review_tier": rows_review_tier,
         "source_equation_valid": reconciliation[1],
         "staging_equation_valid": reconciliation[2],
         "durable_checksum": batch[5],
@@ -198,6 +236,7 @@ def commit(args, metadata):
     entry = metadata["entry"]
     checkpoint = metadata["checkpoint"]
     relevance = metadata["relevance_rules"]
+    include_review_tier = bool(metadata.get("include_review_tier", False))
     scan_run_id = stable_id(
         "scan",
         manifest["manifest_id"],
@@ -236,6 +275,7 @@ def commit(args, metadata):
             score_bytes,
             relevance["version"],
             metadata["relevance_config_hash"],
+            include_review_tier,
         )
         if prior:
             return prior
@@ -326,8 +366,14 @@ def commit(args, metadata):
         if score_orphans:
             raise ValueError("relevance staging contains source IDs absent from candidates")
 
+        retain_decision_predicate = (
+            "scores.decision IN ('retain', 'evaluate')"
+            if include_review_tier
+            else "scores.decision = 'retain'"
+        )
+
         con.execute(
-            """
+            f"""
             CREATE TEMP TABLE retained_candidates AS
             SELECT candidates.*
             FROM candidate_source candidates
@@ -336,7 +382,7 @@ def commit(args, metadata):
                 FROM relevance_source scores
                 WHERE scores.source_type = candidates.source_type
                   AND scores.source_id = candidates.source_id
-                  AND scores.decision = 'retain'
+                  AND {retain_decision_predicate}
             )
             """
         )
@@ -344,6 +390,26 @@ def commit(args, metadata):
             "SELECT count(*) FROM retained_candidates"
         ).fetchone()[0]
         rows_rejected_late = rows_staged - rows_retained
+        rows_review_tier = con.execute(
+            """
+            SELECT count(*)
+            FROM retained_candidates retained
+            WHERE EXISTS (
+                SELECT 1
+                FROM relevance_source scores
+                WHERE scores.source_type = retained.source_type
+                  AND scores.source_id = retained.source_id
+                  AND scores.decision = 'evaluate'
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM relevance_source scores
+                WHERE scores.source_type = retained.source_type
+                  AND scores.source_id = retained.source_id
+                  AND scores.decision = 'retain'
+            )
+            """
+        ).fetchone()[0]
         existing_documents = con.execute(
             """
             SELECT count(*)
@@ -842,6 +908,7 @@ def commit(args, metadata):
             "relevance_rows": relevance_rows,
             "signals_written": signals_written,
             "entities_written": entities_written,
+            "rows_review_tier": rows_review_tier,
             "source_equation_valid": source_equation_valid,
             "staging_equation_valid": staging_equation_valid,
             "durable_checksum": durable_checksum,

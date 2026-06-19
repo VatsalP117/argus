@@ -19,6 +19,28 @@ The scorer reads `configs/relevance/deterministic-v2.yaml` by default and emits 
 
 Semantic and classifier scores remain null. Context boosts, ambiguity penalties, required evidence groups, and all current decisions are deterministic and explainable.
 
+## Tiered retention policy
+
+Argus uses tiered retention, not a strict binary truth filter. The scorer's
+tiers map to trust levels:
+
+- `A`: strong evidence, default for summaries and high-confidence answers
+- `B`: trusted retained evidence, usable in research with evidence backing
+- `C`: weak/borderline review/exploration evidence, stored only with explicit
+  opt-in and not trusted by default
+- `D`: discard, never retained
+
+Default durable commit commits only `A`/`B` (`decision = 'retain'`). `C`
+(`decision = 'evaluate'`) is committed only behind an explicit
+`--include-review-tier` opt-in. `relevance_tier`, `decision`, and
+`decision_reasons` are preserved on every committed relevance row so `C` rows
+are never silently treated as trusted evidence.
+
+The trusted-tier quality gates (retained precision, retained recall, zero
+payment-brand Visa false positives, zero promotion/bot false positives,
+lexical-ambiguity share) still measure `decision = 'retain'` rows. They are not
+lowered. `C` is not judged by the trusted-tier gate.
+
 ## Evaluate
 
 Use a metadata-bearing labelled fixture to compare a score output before committing it:
@@ -41,14 +63,34 @@ go run ./cmd/commit-candidates \
   --entry-id comments-2021-01-000
 ```
 
+By default the command commits only trusted `A`/`B` evidence
+(`decision = 'retain'`). To also commit `C`-tier review/exploration evidence
+(`decision = 'evaluate'`) as a review pool, add `--include-review-tier`:
+
+```bash
+go run ./cmd/commit-candidates \
+  --manifest /tmp/argus-jan-comments-pinned.json \
+  --entry-id comments-2021-01-000 \
+  --include-review-tier
+```
+
+`C` rows are never trusted by default. Default research/query behavior must use
+`A`/`B` only; exploratory or review workflows may explicitly opt into `C`. `C`
+is opt-in for durable commit until a bounded shard/month trial measures
+storage/yield and query-quality impact.
+
 The command:
 
 1. verifies manifest, candidate, score, and configuration checksums
 2. creates a stable private author-hash salt under `state/secrets/`
 3. rejects duplicate source IDs or mismatched source identities
 4. inserts documents, relevance, signals, and entity terms in one transaction
+   (default: `decision = 'retain'` only; with `--include-review-tier`:
+   `decision IN ('retain', 'evaluate')`)
 5. writes scan, staging, batch, and reconciliation metadata
 6. validates durable row counts and checksum before committing
+7. reports `rows_retained`, `rows_review_tier` (count of `C`-only documents),
+   `relevance_rows`, and reconciliation flags
 
 An unchanged validated retry returns `skipped_existing`.
 

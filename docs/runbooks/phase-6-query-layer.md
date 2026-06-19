@@ -19,6 +19,31 @@ The goal of this layer is:
 - avoid letting an LLM improvise directly against raw parquet paths
 - support more than a handful of canned exports
 
+## Tiered Retention and Query Defaults
+
+Argus uses tiered retention (see the phase-8 durable commit runbook and the
+roadmap's tiered retention policy). The trust tiers are:
+
+- `A`/`B` (`decision = 'retain'`): trusted evidence, used by default
+- `C` (`decision = 'evaluate'`): review/exploration evidence, opt-in only
+- `D` (`decision = 'discard'`): never retained
+
+Default research/query behavior must use `A`/`B` only. Exploratory or review
+workflows may explicitly opt into `C`.
+
+Current state and follow-up:
+
+- The current query layer reads the v0 clean and mart Parquet outputs, which do
+  not carry `relevance_tier` or `decision` columns. Those Parquet marts predate
+  the durable `document_relevance` table.
+- The durable commit path now commits `A`/`B` by default and `C` only behind
+  `--include-review-tier`, so the durable corpus is trusted by default.
+- A follow-up task should add a query surface over the durable
+  `documents` / `document_relevance` tables with an explicit
+  `--include-review-tier`/`--tiers` filter so the query layer can enforce
+  `A`/`B`-only defaults and an explicit `C` opt-in directly. Until then, the
+  tiered default is enforced at the durable commit gate, not at the query layer.
+
 ## What Exists Now
 
 The query layer ships as:

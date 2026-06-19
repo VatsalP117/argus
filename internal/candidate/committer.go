@@ -25,6 +25,7 @@ type CommitOptions struct {
 	RelevanceConfigHash string
 	AuthorHashSalt      string
 	ScriptPath          string
+	IncludeReviewTier   bool
 }
 
 type CommitResult struct {
@@ -38,6 +39,7 @@ type CommitResult struct {
 	RowsRetained         int64  `json:"rows_retained"`
 	RowsRejectedLate     int64  `json:"rows_rejected_late"`
 	RowsQuarantined      int64  `json:"rows_quarantined"`
+	RowsReviewTier       int64  `json:"rows_review_tier"`
 	RelevanceRows        int64  `json:"relevance_rows"`
 	SignalsWritten       int64  `json:"signals_written"`
 	EntitiesWritten      int64  `json:"entities_written"`
@@ -58,6 +60,7 @@ type commitMetadata struct {
 	RelevanceRules      config.RelevanceConfig `json:"relevance_rules"`
 	RelevanceConfigHash string                 `json:"relevance_config_hash"`
 	AuthorHashSalt      string                 `json:"author_hash_salt"`
+	IncludeReviewTier   bool                   `json:"include_review_tier"`
 }
 
 func Commit(ctx context.Context, options CommitOptions) (CommitResult, error) {
@@ -106,6 +109,7 @@ func Commit(ctx context.Context, options CommitOptions) (CommitResult, error) {
 		RelevanceRules:      options.RelevanceRules,
 		RelevanceConfigHash: options.RelevanceConfigHash,
 		AuthorHashSalt:      options.AuthorHashSalt,
+		IncludeReviewTier:   options.IncludeReviewTier,
 	})
 	if err != nil {
 		return result, fmt.Errorf("encode commit metadata: %w", err)

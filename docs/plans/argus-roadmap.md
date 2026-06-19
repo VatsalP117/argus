@@ -137,79 +137,109 @@ If relevance retention is poor, then:
 - `deterministic_v3` improved trap handling and reporting discipline
 - `deterministic_v3` still failed the observed-fixture recall target on
   `comments-2021-01-001`
-- conclusion: additive boosts and penalties are nearing their limit
+- `deterministic_v4` improved every metric versus v3 on both observed fixtures
+  with reconciled labels, but still missed the `50%` recall gate on
+  `comments-2021-01-001` (`36.5%`). This is a deterministic recall ceiling, not
+  a label-boundary conflict.
+- A bounded learned-retrieval fallback experiment recovered recall but collapsed
+  precision and leaked a payment-brand Visa false positive. It is recorded as
+  `failed_experiment` and was not promoted.
+- conclusion: additive deterministic scoring has reached its recall ceiling on
+  the observed fixtures; the product should stop treating retrieval as a single
+  binary truth filter.
+
+### Tiered retention policy (approved 2026-06-18)
+
+Because a perfect binary scorer is not reachable right now, Argus uses tiered
+retention instead of a strict binary truth filter. The scorer already emits
+four tiers and three decisions; the durable and query paths must respect them.
+
+Tier meanings:
+
+- `A`: strong evidence. Default for summaries and high-confidence answers.
+- `B`: trusted retained evidence. Usable in research with evidence backing.
+- `C`: weak/borderline review or exploration evidence. Stored only with explicit
+  opt-in and not trusted by default.
+- `D`: discard. Never retained.
+
+Default behavior:
+
+- Durable commit commits only `A`/`B` (`decision = retain`) by default.
+- `C` (`decision = evaluate`) may be committed only behind an explicit
+  `--include-review-tier` opt-in, as a review/exploration pool.
+- Default research/query behavior uses `A`/`B` only. Exploratory or review
+  workflows may explicitly opt into `C`.
+- `D` is always excluded.
+
+Quality gate interpretation:
+
+- The existing evaluation gates (retained precision `>= 70%`, retained recall,
+  zero payment-brand Visa false positives, zero promotion/bot false positives,
+  lexical-ambiguity share `<= 20%`) still measure the `decision = retain`
+  trusted tier (`A`/`B`). They are not lowered or redefined.
+- `C` is not judged by the trusted-tier gate. `C` exists for recall recovery,
+  manual review, and future training data, not for trusted answers.
+- This is not "v4 passed." It is "v4 is a useful tiered front door when its
+  tiers are respected."
+
+Storage guardrails:
+
+- `C` is opt-in for durable commit until a bounded shard/month trial measures
+  storage/yield and query-quality impact.
+- The next task must report retained rows by tier, bytes per retained document,
+  and the effect of including `C` on query results.
 
 ### Immediate next step
 
-Run one more bounded deterministic experiment:
+The `deterministic_v4` proximity calibration is complete. It added
+proximity-aware conjunction rules, recalibrated only on observed fixtures `000`
+and `001`, and did not touch frozen shards `002` and `003`.
 
-- `deterministic_v4`
-- add proximity-aware conjunction rules
-- recalibrate only on observed fixtures `000` and `001`
-- do not touch frozen shards `002` and `003`
+### Observed outcome
 
-### Expected outcomes
+`v4` produced a `mixed_calibration` result (see
+`docs/reports/deterministic-v4-calibration-2026-06-18.md`):
 
-#### Good outcome
+- It improved every metric versus v3 on both observed fixtures with reconciled
+  labels, with no trap leakage and no precision gate violation.
+- It still missed the `001` recall gate (`36.5%` against `50%`). The remaining
+  gap is a deterministic recall ceiling, not a label-boundary conflict.
+- A bounded learned-retrieval fallback experiment then recovered recall but
+  collapsed precision and leaked a payment-brand Visa false positive
+  (`docs/reports/learned-retrieval-fallback-2026-06-18.md`). It is recorded as
+  `failed_experiment` and was not promoted.
 
-`v4` hits the precision and recall gates on both observed fixtures. If that
-happens:
+The retrieval decision tree below was resolved into the tiered retention policy
+above: deterministic scoring is the tiered front door, not a perfect binary
+classifier. Frozen-shard validation remains blocked until a bounded
+tiered-retention trial confirms the corpus is useful by tier.
 
-1. validate the frozen config on shard `002`
-2. validate on shard `003` only if `002` passes
-3. if unseen validation passes, promote that scorer for bounded durable ingest
+## 7. Retrieval Decision Tree (resolved)
 
-#### Mixed outcome
+The `v4` outcome has been observed. The tree resolved as follows:
 
-`v4` improves but still misses the gate narrowly. If that happens:
+### Branch B/C: deterministic ceiling reached
 
-- review whether the remaining misses are label-boundary issues
-- decide whether one last bounded deterministic change is justified
-- do not casually keep extending heuristic complexity
+`v4` did not pass the observed recall gate on `001`, and the learned fallback
+failed its hard requirements. This is the deterministic ceiling described by
+Branch B/C.
 
-#### Bad outcome
+Resolved next focus:
 
-`v4` still materially under-recovers relevant evidence or needs awkward rule
-growth to pass. If that happens:
+1. freeze deterministic candidate retrieval as the tiered high-recall front door
+2. adopt tiered retention (see `Tiered retention policy` above) so `A`/`B` are
+   trusted and `C` is review/exploration evidence
+3. keep DuckDB and current evaluation tooling; do not promote the failed learned
+   layer
+4. run a bounded tiered-retention trial before any wider `C`-tier commit or
+   frozen-shard validation
 
-- stop extending heuristic scoring
-- plan a lightweight learned reranking or classification layer on top of the
-  existing candidate retrieval and DuckDB-backed evaluation workflow
+### Branch A (not reached)
 
-## 7. Retrieval Decision Tree
-
-Use this after `v4` completes:
-
-### Branch A: `v4` passes observed calibration and unseen validation
-
-Move forward with deterministic retrieval as the production retrieval layer for
-the next bounded ingest phase.
-
-Next focus:
-
-1. durable ingest loop
-2. one-month bounded corpus build
-3. query UX and evidence-backed research workflows
-
-### Branch B: `v4` passes observed calibration but fails unseen validation
-
-Interpret this as overfitting or deterministic ceiling.
-
-Next focus:
-
-1. freeze deterministic candidate retrieval as the high-recall front door
-2. add a learned relevance layer for reranking or classification
-3. keep DuckDB and current evaluation tooling
-
-### Branch C: `v4` fails observed calibration
-
-Interpret this as strong evidence that deterministic logic is not enough.
-
-Next focus:
-
-1. stop scoring-rule churn
-2. define a lightweight learned retrieval milestone
-3. use current labelled fixtures as training/evaluation assets
+`v4` did not pass observed calibration cleanly, so the Branch A path (promote
+deterministic retrieval for unattended durable ingest, validate on frozen
+shards `002` then `003`) was not taken. Frozen-shard validation remains a
+gated follow-up after the tiered-retention trial.
 
 ## 8. Durable Ingestion Roadmap
 
@@ -461,18 +491,21 @@ Before starting substantial work, agents should read:
 
 The current next goal is:
 
-`deterministic_v4` proximity calibration
+tiered retention policy implementation and a bounded tiered-retention trial
 
 Task branch:
 
-- `agent/deterministic-v4-proximity-calibration`
+- `agent/tiered-retention-policy`
 
 Task artifacts:
 
-- [TASK.md](/Users/vatsalpatel/Desktop/Projects/argus/.agent/tasks/2026-06-17-deterministic-v4-proximity-calibration/TASK.md)
-- [PLAN.md](/Users/vatsalpatel/Desktop/Projects/argus/.agent/tasks/2026-06-17-deterministic-v4-proximity-calibration/PLAN.md)
+- [TASK.md](/Users/vatsalpatel/Desktop/Projects/argus/.agent/tasks/2026-06-18-tiered-retention-policy/TASK.md)
+- [PLAN.md](/Users/vatsalpatel/Desktop/Projects/argus/.agent/tasks/2026-06-18-tiered-retention-policy/PLAN.md)
 
-This is the active gate for the whole project right now.
+The retrieval gate is now interpreted as a tiered front door (see
+`Tiered retention policy` above). The next step after this task is a bounded
+shard/month trial of tiered retention that measures storage/yield and
+query-quality by tier before any wider `C`-tier commit.
 
 ## 18. Canonical Interpretation
 
